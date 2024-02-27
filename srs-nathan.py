@@ -2,18 +2,124 @@ from tkinter import *
 from tkinter import ttk
 from tkinter import messagebox
 import mysql.connector
-import hashlib
-#rename variables + make code more concise/less repeats at the end + less globals
+import hashlib #create hashing algorithm myself??
+import random
+#rename variables + make code more concise/less repeats + less globals (by passing local variables into other subroutines) #(remove passing variables into subroutines if not necessary)
 mydb = mysql.connector.connect(host="localhost", user="sqluser", password="password", database="srs_data")
 mycursor = mydb.cursor(buffered=True)
 #offline ver can be made by try'ing sql connection and then alerting user that they are offline,
 #have to choose to download dekcs (even if self made)
-#make gui look neater, less empty spaces (fill=X)
+#make gui look neater, less empty spaces (side=TOP, fill=X)
+#use sql order by if necessary + regular refreshes of pages
+#make windows same size esp in flashcard reviewing ,,,,,,,maybe?
 window = Tk()
 window.title("Spaced Repetition Flashcard Software")
 #window.iconbitmap("librarypc.ico")
 window['bg']="#e6e7f0"
 window.resizable(False, False)
+
+class Flashcard:
+    def __init__(self, id, question, answer, format, priority):
+        self.id = id
+        self.question = question
+        self.answer = answer
+        self.format = format
+        self.priority = priority
+
+class PeerFlashcard(Flashcard):
+    def __init__(self, id, question, answer, format, priority, input):
+        super().__init__(id, question, answer, format, priority)
+        self.input = input
+
+class CircularPriorityQueue:
+    def __init__(self, size):
+        self.front = -1
+        self.rear = -1
+        self.maxsize = size
+        self.queue = [None] * self.maxsize
+    def isEmpty(self):
+        return self.front == -1 and self.rear == -1
+    def isFull(self):
+        return (self.rear + 1) % self.maxsize == self.front
+    def enQueue(self, flashcard):
+        if flashcard.priority == -1: #to allow unused cards to be placed randomly in queue
+            flashcard.priority = float(random.randint(0, 10)) #float data type to identify new flashcards so they can be prioritised according to their "new" status
+            priority = flashcard.priority
+        else:
+            priority = flashcard.priority
+        if self.isFull():
+            return None
+        elif self.isEmpty():
+            self.front = 0
+            self.rear = 0
+            self.queue[self.rear] = flashcard
+        else:
+            position = self.front
+            while position != self.rear and self.queue[position].priority >= priority: #also deal with when card doesnt have priority lol (if priority == 0?) #checking all cards from front until finding one with lower priority
+                position = (position + 1) % self.maxsize
+            if position == self.rear: #works if self.rear == 0
+                if self.queue[position].priority >= priority: #if priorities are equal, the new flashcard will be placed behind
+                    self.rear = (self.rear + 1) % self.maxsize
+                    self.queue[self.rear] = flashcard
+                elif self.queue[position].priority < priority: #shuffle self.rear along 1
+                    item = self.queue[position]
+                    self.rear = (self.rear + 1) % self.maxsize
+                    self.queue[self.rear] = item
+                    self.queue[position] = flashcard
+            else: #shuffle all flashcards after target position along 1 #simplify all this
+                card_position = self.rear
+                while card_position != (position - 1) % self.maxsize:
+                    item = self.queue[card_position]
+                    new_card_position = (card_position + 1) % self.maxsize
+                    self.queue[new_card_position] = item
+                    card_position = (card_position - 1) % self.maxsize
+                self.rear = (self.rear + 1) % self.maxsize
+                self.queue[position] = flashcard
+    def deQueue(self):
+        if self.isEmpty():
+            return None
+        else:
+            item = self.queue[self.front]
+            if self.front == self.rear:
+                self.front = -1
+                self.rear = -1
+            else:
+                self.front = (self.front + 1) % self.maxsize
+            return item
+    def getQueue(self):
+        return list((flashcard.id, flashcard.priority) for flashcard in self.queue if flashcard is not None)
+    def getFront(self):
+        return self.front
+    def getRear(self):
+        return self.rear
+    
+class Stack:
+    def __init__(self, size):
+        self.top = -1
+        self.maxsize = size
+        self.stack = [None] * self.maxsize
+    def isEmpty(self):
+        return self.top == -1
+    def isFull(self):
+        return self.top + 1 == self.maxsize
+    def push(self, flashcard):
+        if self.isFull():
+            return None
+        else:
+            self.top += 1
+            self.stack[self.top] = flashcard
+    def pop(self):
+        if self.isEmpty():
+            return None
+        else:
+            flashcard = self.stack[self.top]
+            self.top -= 1
+            return flashcard
+    def peek(self):#do i even need this lol
+        if self.isEmpty():
+            return None
+        else:
+            return self.stack[self.top]
 
 class page(Frame):
     def __init__(self, *args, **kwargs):
@@ -21,7 +127,7 @@ class page(Frame):
     def show(self):
         self.lift()
 
-user1 = StringVar(window,"user_friend") #replace
+user1 = StringVar(window,"user_friend") #replace and get rid of
 user2 = StringVar(window,"user_friend_2") #replace
 user3 = StringVar(window,"user_friend_3") #replace
 
@@ -374,15 +480,40 @@ def createDeck():
         deckTab.destroy()
 
 def deckSelected(event): #event taken as an argument due to bind
+    global refresh_flashcards
+    def fetch_flashcards():
+        mycursor.execute("SELECT question, answer FROM user_flashcard INNER JOIN user_deck ON user_deck.deckID = user_flashcard.deckID INNER JOIN user_account ON user_account.accountID = user_deck.accountID WHERE user_deck.deckName = %s AND user_account.username = %s ORDER BY flashcardID DESC", (selectedDeck, usernameLogin))
+        flashcards = mycursor.fetchall()
+        return flashcards
+    def refresh_flashcards():
+        for widget in list_page.winfo_children():
+            if not isinstance(widget, (Listbox, Scrollbar)):
+                continue
+            widget.destroy()
+        yscrollbar = Scrollbar(list_page)
+        yscrollbar.pack(side=RIGHT, fill=Y)
+        xscrollbar = Scrollbar(list_page)
+        xscrollbar.pack(side=BOTTOM, fill=X)
+        flashcard_list = Listbox(list_page, yscrollcommand=yscrollbar.set, xscrollcommand=xscrollbar.set, bg="#e6e7f0", font=("Helvetica", 9), relief=FLAT, selectmode=SINGLE, selectbackground="#e6e7f0", selectforeground="#000000", activestyle="none", width=50)
+        flashcards = fetch_flashcards()
+        for flashcard in flashcards:
+            flashcard_list.insert(END, flashcard[0])
+            flashcard_list.itemconfig(END, bg="#d7d8e0")
+            flashcard_list.insert(END, flashcard[1])
+        flashcard_list.pack(fill=BOTH, expand=True)
+        yscrollbar.config(command=flashcard_list.yview)
+        xscrollbar.config(command=flashcard_list.xview)
     global selectedDeck
     selectedDeck = "".join(deckList.get(i) for i in deckList.curselection())
-    mycursor.execute("SELECT privacy FROM user_deck INNER JOIN user_account ON user_account.accountID = user_deck.accountID WHERE user_deck.deckName=%s AND user_account.username=%s", (selectedDeck, usernameLogin)) #make sure all sql string input are unique, as to not accidentally fetch someone else's deck
-    deckSetting = mycursor.fetchone()
-    if deckSetting == ('public',):
+    mycursor.execute("SELECT privacy, score FROM user_deck INNER JOIN user_account ON user_account.accountID = user_deck.accountID WHERE user_deck.deckName=%s AND user_account.username=%s", (selectedDeck, usernameLogin)) #make sure all sql string input are unique, as to not accidentally fetch someone else's deck
+    deck_results = mycursor.fetchone()
+    deckSetting = deck_results[0]
+    deck_score = deck_results[1]
+    if deckSetting == "public":
         deckPrivacy = "Public"
-    elif deckSetting == ('friends',):
+    elif deckSetting == "friends":
         deckPrivacy = "Friends Only"
-    elif deckSetting == ('private',):
+    elif deckSetting == "private":
         deckPrivacy = "Private"
     deckPage = Toplevel()
     deckPage.title(selectedDeck)
@@ -402,7 +533,7 @@ def deckSelected(event): #event taken as an argument due to bind
         text="Review", 
         bg="#bfc0c7", 
         font=("Helvetica",9),
-        command=reviewFlashcards
+        command=lambda:reviewFlashcards(deckPage, deckList)
         )
     reviewButton.pack(side=LEFT)
     delete_button = Button(
@@ -422,6 +553,13 @@ def deckSelected(event): #event taken as an argument due to bind
         bg="#e6e7f0"
         )
     deckTitle.pack()
+    deck_score_label = Label(
+        mainPage,
+        text=f"Score: {deck_score}%",
+        font=("Helvetica", 12),
+        bg="#e6e7f0"
+        )
+    deck_score_label.pack()
     deckPrivate = Label(
         mainPage,
         text=f"Privacy Setting: {deckPrivacy}",
@@ -430,12 +568,15 @@ def deckSelected(event): #event taken as an argument due to bind
         )
     deckPrivate.pack()
     mainPage.pack(side=TOP, fill=X)
+    list_page = Frame(deckFrame, bg="#e6e7f0")
+    list_page.pack(side=TOP, fill=X)
     deckFrame.pack(fill=BOTH, expand=True)
+    refresh_flashcards()
 
 def addFlashcards():
     def checkFormat():
         def add_flashcard():
-            if flashcard_format == "text": #add constraints eg length of question, answer...
+            if flashcard_format == "text": #add constraints eg length of question, answer... (probably increase length coz wtf)
                 question = input_2.get("1.0", "end-1c")
                 answer = input_3.get("1.0", "end-1c")
                 mycursor.execute("SELECT * FROM user_flashcard INNER JOIN user_deck ON user_deck.deckID = user_flashcard.deckID INNER JOIN user_account ON user_account.accountID = user_deck.accountID WHERE user_flashcard.question = %s AND user_deck.deckName = %s AND user_account.username = %s", (question, selectedDeck, usernameLogin))
@@ -446,6 +587,7 @@ def addFlashcards():
                     mydb.commit()
                     input_2.delete("1.0", "end")
                     input_3.delete("1.0", "end")
+                    refresh_flashcards()
         check_card_format = input_1.get()
         title_1.pack_forget()
         input_1.pack_forget()
@@ -530,16 +672,244 @@ def addFlashcards():
     header_3.pack(side=TOP, fill=X)
     window_frame.pack(fill=BOTH, expand=True)
 
-def reviewFlashcards():
+def reviewFlashcards(deckPage, deckList):
+    def do_pass(): #so that listbox is binded when "finish" button is pressed
+        pass
+    def fetch_flashcards():
+        mycursor.execute("SELECT flashcardID, question, answer, cardFormat, priority FROM user_flashcard INNER JOIN user_deck ON user_deck.deckID = user_flashcard.deckID INNER JOIN user_account ON user_account.accountID = user_deck.accountID WHERE user_deck.deckName = %s AND user_account.username = %s", (selectedDeck, usernameLogin))
+        flashcards = mycursor.fetchall()
+        return flashcards
+    def queue_flashcards(flashcards, flashcard_queue):
+        for flashcard in flashcards:
+            flashcard = Flashcard(flashcard[0], flashcard[1], flashcard[2], flashcard[3], flashcard[4])#simpler way to do this using list comprehension?
+            flashcard_queue.enQueue(flashcard)
+    def review_flashcards(): #indirect recursion? base case is when deQueue returns None (i.e. queue is empty) or number > 10 #review card based on card format
+        def answer_review(new_flashcard, question_header, input_text, flip_button, flashcards_reviewed, reviewed_list):
+            def update_priority(new_flashcard, new_priority, reviewed_list):
+                new_priority = max(0, min(10, new_priority))
+                flashcard_id = new_flashcard.id
+                mycursor.execute("UPDATE user_flashcard SET priority = %s WHERE flashcardID = %s", (new_priority, flashcard_id)) #make sure flashcards with lowest priority arent just left at the back forever - if all cards are the same priority, randomise?#also document all this
+                mydb.commit()
+                reviewed_list.append([new_flashcard.id, new_flashcard.question, new_flashcard.answer, new_flashcard.format, new_priority]) #no option to edit DURING reviews
+            def flashcard_rating1(new_flashcard, reviewed_list):
+                if isinstance(new_flashcard.priority, float):
+                    new_priority = 9
+                else:
+                    new_priority = new_flashcard.priority + 2 #low increment coz program assumes that you will do better on next review considering you've just looked at the flashcard.
+                update_priority(new_flashcard, new_priority, reviewed_list)
+            def flashcard_rating2(new_flashcard, reviewed_list):
+                if isinstance(new_flashcard.priority, float):
+                    new_priority = 7
+                else:
+                    new_priority = new_flashcard.priority + 1 #add or minus 1 means that all possible rating numbers (0-10) will be used
+                update_priority(new_flashcard, new_priority, reviewed_list)
+            def flashcard_rating3(new_flashcard, reviewed_list):
+                if isinstance(new_flashcard.priority, float):
+                    new_priority = 5
+                else:
+                    new_priority = new_flashcard.priority - 1
+                update_priority(new_flashcard, new_priority, reviewed_list)
+            def flashcard_rating4(new_flashcard, reviewed_list): #so that cards selected as "easy" don't automatically have lowest priority - need more than 1 "easy"
+                if isinstance(new_flashcard.priority, float):
+                    new_priority = 3
+                else:
+                    new_priority = new_flashcard.priority - 2
+                update_priority(new_flashcard, new_priority, reviewed_list)
+            def peer_rating_push(new_flashcard, reviewed_list):
+                peer_flashcard = PeerFlashcard(new_flashcard[0], new_flashcard[1], new_flashcard[2], new_flashcard[3], new_flashcard[4], user_input)
+                peer_review_stack.push(peer_flashcard)
+            user_input = input_text.get("1.0", "end-1c")
+            question_header.pack_forget()
+            flip_button.pack_forget()
+            input_text.pack_forget()
+            answer_header = Label(
+                text_frame,
+                text=f"{new_flashcard.answer}",
+                font=("Helvetica", 14),
+                bg="#e6e7f0",
+                wraplength=500,
+                pady=5
+                )
+            answer_header.pack()
+            output_header = Label(
+                text_frame,
+                text="You wrote:",
+                font=("Helvetica", 10),
+                bg="#e6e7f0"
+                )
+            output_header.pack()
+            output_text = Label(
+                text_frame,
+                text=f"{user_input}",
+                font=("Helvetica", 9),
+                bg="#e6e7f0",
+                wraplength=450
+                )
+            output_text.pack()
+            rating1_button = Button(
+                button_frame,
+                text="Fail",
+                font=("Helvetica", 9),
+                bg="#bfc0c7",
+                command=lambda:[flashcard_rating1(new_flashcard, reviewed_list), question_review(flashcards_reviewed, reviewed_list)] #in order of function being called
+                )
+            rating1_button.pack(side=LEFT)
+            rating2_button = Button(
+                button_frame,
+                text="Hard",
+                font=("Helvetica", 9),
+                bg="#bfc0c7",
+                command=lambda:[flashcard_rating2(new_flashcard, reviewed_list), question_review(flashcards_reviewed, reviewed_list)]
+                )
+            rating2_button.pack(side=LEFT)
+            rating3_button = Button(
+                button_frame,
+                text="Good",
+                font=("Helvetica", 9),
+                bg="#bfc0c7",
+                command=lambda:[flashcard_rating3(new_flashcard, reviewed_list), question_review(flashcards_reviewed, reviewed_list)]
+                )
+            rating3_button.pack(side=LEFT)
+            rating4_button = Button(
+                button_frame,
+                text="Easy",
+                font=("Helvetica", 9),
+                bg="#bfc0c7",
+                command=lambda:[flashcard_rating4(new_flashcard, reviewed_list), question_review(flashcards_reviewed, reviewed_list)]
+                )
+            rating4_button.pack(side=LEFT)
+            peer_button = Button(
+                button_frame,
+                text="Peer Mark",
+                font=("Helvetica", 9),
+                bg="#bfc0c7",
+                command=lambda:[peer_rating_push(new_flashcard, reviewed_list), question_review(flashcards_reviewed, reviewed_list)]
+            )
+            peer_button.pack(side=RIGHT)
+        def question_review(flashcards_reviewed, reviewed_list):
+            def end_review():
+                mycursor.execute("SELECT priority FROM user_flashcard INNER JOIN user_deck ON user_deck.deckID = user_flashcard.deckID INNER JOIN user_account ON user_account.accountID = user_deck.accountID WHERE user_deck.deckName = %s AND user_account.username = %s", (selectedDeck, usernameLogin))
+                result = mycursor.fetchall()
+                print(result)
+                flashcards_number = len(result)
+                flashcards_sum = 0
+                for i in range (0, len(result)):
+                    if result[i][0] == -1:
+                        flashcards_sum += 7 #weighed(?) priority for non-used cards
+                    else:
+                        flashcards_sum += result[i][0]
+                    print(result[i][0])
+                    print(flashcards_sum)
+                score = round((10 - (flashcards_sum / flashcards_number)) * 10, 1) #make it so a flashcard has to have a certain number of "easy"s to immediately be considered 100%?  or mkae an "ease" value which increases/decreases with each "easy" - max 100 or smth, and then combine this to find a reliable priority in the queue - although above algorith already kinda solves this
+                score = max(0.0, min(100.0, score)) #not even necessary i think but idk just in case
+                mycursor.execute("UPDATE user_deck INNER JOIN user_account ON user_account.accountID = user_deck.accountID SET user_deck.score = %s WHERE user_deck.deckName = %s AND user_account.username = %s", (score, selectedDeck, usernameLogin))
+                mydb.commit()
+                grade_title = Label(
+                    text_frame,
+                    text="Overall Deck Score",
+                    font=("Helvetica",17),
+                    bg="#e6e7f0"
+                    )
+                grade_title.pack()
+                score_title = Label(
+                    text_frame,
+                    text=f"{score}%",
+                    font=("Helvetica",20,"bold"),
+                    bg="#e6e7f0"
+                    )
+                score_title.pack()
+                again_button = Button(
+                    button_frame,
+                    text="Review Again",
+                    font=("Helvetica",9),
+                    bg="#bfc0c7",
+                    command=lambda:review_again(flashcards_reviewed, reviewed_list)
+                    )
+                again_button.pack(side=LEFT)
+                finish_button = Button( #finish button allows all data to be uploaded to mysql database
+                    button_frame,
+                    text="Finish",
+                    font=("Helvetica",9),
+                    bg="#bfc0c7",
+                    command=finish_review
+                    )
+                finish_button.pack(side=LEFT)
+            def finish_review():
+                review_flashcards_page.destroy()
+                deckList.bind("<Double-1>", deckSelected)
+            def review_again(flashcards_reviewed, reviewed_list):
+                for i in range(0, len(reviewed_list)): #list used (instead of stack/queue bc...) (this list basically functions as a queue anyway, but the order isn't relevant because it'll be arranged by priority by cpq)
+                    again_flashcard = Flashcard(reviewed_list[i][0], reviewed_list[i][1], reviewed_list[i][2], reviewed_list[i][3], reviewed_list[i][4])
+                    flashcard_queue.enQueue(again_flashcard) #utilises circular queue's wrapping around properties
+                print(reviewed_list)
+                print(len(reviewed_list))
+                flashcards_reviewed = 0
+                reviewed_list = []
+                question_review(flashcards_reviewed, reviewed_list)
+            for widget in text_frame.winfo_children():
+                if not isinstance(widget, (Label)): #replace with pack_forget()???if possible #change len(mycursor.fetchall()) to count(*)??
+                    continue
+                widget.destroy()
+            for widget in button_frame.winfo_children():
+                if not isinstance(widget, (Button)):
+                    continue
+                widget.destroy()
+            print(flashcard_queue.getQueue())
+            flashcards_reviewed += 1
+            if flashcards_reviewed > 10:
+                end_review()
+            else:
+                new_flashcard = flashcard_queue.deQueue()
+                if new_flashcard is None: #pop stacked cards and show one by one and who to send to (if there are any), after: #grade/total score of deck after completed reivew
+                    end_review()
+                else:
+                    question_header = Label(
+                        text_frame,
+                        text=f"{new_flashcard.question}",
+                        font=("Helvetica",14),
+                        bg="#e6e7f0",
+                        wraplength=500
+                        )
+                    question_header.pack()
+                    input_text = Text(text_frame, width=50, height=9)
+                    input_text.pack(fill=X)
+                    flip_button = Button(
+                        button_frame,
+                        text="Flip",
+                        font=("Helvetica",9),
+                        bg="#bfc0c7",
+                        command=lambda:answer_review(new_flashcard, question_header, input_text, flip_button, flashcards_reviewed, reviewed_list)
+                        )
+                    flip_button.pack(side=TOP, fill=X)
+        deckList.unbind("<Double-1>") #cannot open window while reviewing in case the user deletes deck -> causes sql error
+        review_flashcards_page = Toplevel()
+        review_flashcards_page.title(selectedDeck)
+        review_flashcards_page.protocol("WM_DELETE_WINDOW", do_pass)
+        review_flashcards_page.resizable(False, False) #all flashcards put into queue, and organised depending on priority thanks to enQueue(). flashcard reviews are 10 at a time, and are dequeued one by one to get the next flashcard
+        flashcards = fetch_flashcards()
+        deck_size = len(flashcards)
+        flashcard_queue = CircularPriorityQueue(deck_size)
+        queue_flashcards(flashcards, flashcard_queue)
+        peer_review_stack = Stack(deck_size)
+        review_page = Frame(review_flashcards_page, bg="#e6e7f0")
+        text_frame = Frame(review_page, bg="#e6e7f0")
+        text_frame.pack(side=TOP, fill=X)
+        button_frame = Frame(review_page, bg="#d7d8e0")
+        button_frame.pack(side=TOP, fill=X)
+        review_page.pack(fill=BOTH, expand=TRUE)
+        flashcards_reviewed = 0
+        reviewed_list = []
+        question_review(flashcards_reviewed, reviewed_list)
     mycursor.execute("SELECT flashcardID FROM user_flashcard INNER JOIN user_deck ON user_deck.deckID = user_flashcard.deckID INNER JOIN user_account ON user_account.accountID = user_deck.accountID WHERE user_deck.deckName = %s AND user_account.username = %s", (selectedDeck, usernameLogin))
     if mycursor.fetchone():
-        pass #review here
+        deckPage.destroy()
+        review_flashcards()
     else:
         messagebox.showerror("Empty Deck", "There are no flashcards in this deck.")
 
 def delete_deck(deckPage):
     answer = messagebox.askokcancel("Delete Deck", f"Are you sure you want to delete {selectedDeck}? All of the flashcards it contains will also be deleted.")
-    if answer: #only 1 inner join query able to be used in delete (mysql) + check later for flashcard removal
+    if answer: #only 1 inner join able to be used in delete query
         mycursor.execute("DELETE user_flashcard FROM user_flashcard INNER JOIN user_deck ON user_deck.deckID = user_flashcard.deckID WHERE user_deck.deckName = %s AND user_deck.accountID IN (SELECT user_account.accountID FROM user_account WHERE user_account.username=%s)", (selectedDeck, usernameLogin))
         mydb.commit()
         mycursor.execute("DELETE user_deck FROM user_deck INNER JOIN user_account ON user_account.accountID = user_deck.accountID WHERE user_deck.deckName = %s AND user_account.username = %s", (selectedDeck, usernameLogin))
@@ -869,14 +1239,14 @@ class collectionPage(page):
         mycursor.execute("SELECT username, firstName, lastName, userRank, friendRequest, markingRequest, centre FROM user_account WHERE username=%s", (usernameLogin,))
         userInfo = mycursor.fetchone()
         return userInfo
-    def fetchDecks(self, usernameLogin):
-        mycursor.execute("SELECT deckName, privacy FROM user_deck INNER JOIN user_account ON user_account.accountID = user_deck.accountID WHERE user_account.username = %s", (usernameLogin,))
+    def fetchDecks(self):
+        mycursor.execute("SELECT deckName, privacy FROM user_deck INNER JOIN user_account ON user_account.accountID = user_deck.accountID WHERE user_account.username = %s ORDER BY deckName ASC", (usernameLogin,))
         userDecks = mycursor.fetchall()
         return userDecks
     def showDashboard(self, usernameLogin):
         username1, firstName1, lastName1, userRank1, friendRequest1, markingRequest1, centre1 = self.fetchUserInfo(usernameLogin) #allowing users to edit decks/flashcards after creation may be a bit long, maybe something to improve in evaluation
         global deckList
-        decks = self.fetchDecks(usernameLogin)
+        decks = self.fetchDecks()
         for widget in self.collection.winfo_children():
             if not isinstance(widget, (Listbox, Scrollbar)):
                 continue
@@ -885,7 +1255,7 @@ class collectionPage(page):
         scrollbar.pack(side = RIGHT, fill=Y)
         deckList = Listbox(self.collection, yscrollcommand=scrollbar.set, bg="#e6e7f0", font=("Helvetica", 12), relief=FLAT, selectmode=SINGLE, selectbackground="#bfc0c7")
         for deck in decks:
-            deckList.insert(END, str(deck[0]))
+            deckList.insert(END, deck[0])
         deckList.pack(fill=BOTH, expand=True)
         deckList.bind("<Double-1>", deckSelected)
         scrollbar.config(command = deckList.yview)
