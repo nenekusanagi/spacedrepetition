@@ -26,7 +26,7 @@ If you are unsure about how well you responded to the question, or feel that you
 
 At the end of the deck review, if you have selected any flashcards to be "peer marked", they will one-by-one be displayed to the user, who can then choose a friend to send their flashcard and inputted answer to. 
 
-The chosen friend will then receive the flashcard and inputted answer in their inbox, from where they can review the flashcard's question, original answer and user's answer, and choose the option they see fit (without bias which may have influenced the choice of the rating if the sender had not sent it themself).
+The chosen friend will then receive the flashcard and inputted answer in their inbox, from where they can review the flashcard's question, original answer and user's answer, and choose the option they see fit (without bias which may have influenced the choice of the rating if the sender had reviewed it themself).
 
 The recipient may also provide their own feedback if they wish.
 
