@@ -577,141 +577,170 @@ def reviewFlashcards(deckPage, deckList):
             )
             peer_button.pack(side=RIGHT)
         def question_review(flashcards_reviewed, reviewed_list):
+            def review_show():
+                mycursor.execute("SELECT priority FROM user_flashcard INNER JOIN user_deck ON user_deck.deckID = user_flashcard.deckID INNER JOIN user_account ON user_account.accountID = user_deck.accountID WHERE user_deck.deckName = %s AND user_account.username = %s", (selectedDeck, usernameLogin))
+                result = mycursor.fetchall()
+                flashcards_number = len(result)
+                flashcards_sum = 0
+                for i in range (0, len(result)):
+                    if result[i][0] == -1:
+                        flashcards_sum += 7 #weighed(?) priority for non-used cards
+                    else:
+                        flashcards_sum += result[i][0]
+                score = round((10 - (flashcards_sum / flashcards_number)) * 10, 1) #make it so a flashcard has to have a certain number of "easy"s to immediately be considered 100%?  or mkae an "ease" value which increases/decreases with each "easy" - max 100 or smth, and then combine this to find a reliable priority in the queue - although above algorith already kinda solves this
+                score = max(0.0, min(100.0, score)) #not even necessary i think but idk just in case
+                mycursor.execute("UPDATE user_deck INNER JOIN user_account ON user_account.accountID = user_deck.accountID SET user_deck.score = %s WHERE user_deck.deckName = %s AND user_account.username = %s", (score, selectedDeck, usernameLogin))
+                mydb.commit()
+                grade_title = Label(
+                    text_frame,
+                    text="Overall Deck Score",
+                    font=("Helvetica",17),
+                    bg="#e6e7f0"
+                    )
+                grade_title.pack()
+                score_title = Label(
+                    text_frame,
+                    text=f"{score}%",
+                    font=("Helvetica",20,"bold"),
+                    bg="#e6e7f0"
+                    )
+                score_title.pack()
+                again_button = Button(
+                    button_frame,
+                    text="Review Again",
+                    font=("Helvetica",9),
+                    bg="#bfc0c7",
+                    command=lambda:review_again(flashcards_reviewed, reviewed_list)
+                    )
+                again_button.pack(side=LEFT)
+                finish_button = Button( #finish button allows all data to be uploaded to mysql database
+                    button_frame,
+                    text="Finish",
+                    font=("Helvetica",9),
+                    bg="#bfc0c7",
+                    command=finish_review
+                    )
+                finish_button.pack(side=LEFT)
             def end_review():
-                def peer_review():
+                def peer_review(peer_counter, number_stacked):
                     def fetchfriend_info():
                         mycursor.execute("SELECT ua2.username FROM user_account ua1 INNER JOIN user_friend ON user_friend.accountID = ua1.accountID INNER JOIN user_account ua2 ON ua2.accountID = user_friend.accountID2 WHERE ua1.username = %s", (usernameLogin,))
                         return mycursor.fetchall()
-                    def check_peer():
+                    def check_peer(peer_flashcard, peer_counter, number_stacked):
                         selected_indices = peers_list.curselection()
                         if selected_indices:
                             selected_peer = "".join(peers_list.get(i) for i in selected_indices)
-                            mycursor.execute("SELECT * FROM user_account WHERE username = %s AND markingRequest = 'off'", (selected_peer,))
+                            mycursor.execute("SELECT * FROM user_peermarking INNER JOIN user_account ON user_account.accountID = user_peermarking.accountID WHERE user_peermarking.flashcardID = %s AND user_account.username = %s", (peer_flashcard.id, usernameLogin))
                             if mycursor.fetchone():
-                                messagebox.showerror("Invalid Friend", "This user has peer marking turned off.")
+                                messagebox.showerror("Invalid Flashcard", "This flashcard is already pending a response in a different peer marking submission.")#CHANGE TO WHEN PEER MARK BUTTON PRESSED
                             else:
-                                #sql...#check if user already has submission for the same flashcard (doesn't matter if same user or not)
-                                messagebox.showinfo("Marking Request Sent", f"Your marking request to {selected_peer} has been sent and is now pending a response.")
+                                mycursor.execute("SELECT * FROM user_account WHERE username = %s AND markingRequest = 'off'", (selected_peer,))
+                                if mycursor.fetchone():
+                                    messagebox.showerror("Invalid Friend", "This user has peer marking turned off.")
+                                else:
+                                    mycursor.execute("INSERT INTO user_peermarking (accountID, flashcardID, accountID2, useranswer) VALUES ((SELECT user_account.accountID FROM user_account WHERE user_account.username = %s), %s, (SELECT user_account.accountID FROM user_account WHERE user_account.username = %s), %s)", (usernameLogin, peer_flashcard.id, selected_peer, peer_flashcard.input))
+                                    mydb.commit()
+                                    messagebox.showinfo("Marking Request Sent", f"Your marking request to {selected_peer} has been sent and is now pending a response.")
+                                    peer_counter += 1
+                                    peer_review(peer_counter, number_stacked)
                         else:
                             messagebox.showerror("Invalid Friend", "No friend has been selected.")
-                    for widget in text_frame.winfo_children():
-                        if not isinstance(widget, (Label)):
-                            continue
-                        widget.destroy()
-                    for widget in button_frame.winfo_children():
-                        if not isinstance(widget, (Button)):
-                            continue
-                        widget.destroy()
-                    for widget in button_frame.winfo_children():
-                        if not isinstance(widget, (Scrollbar)):
-                            continue
-                        widget.destroy()
-                    for widget in button_frame.winfo_children():
-                        if not isinstance(widget, (Listbox)):
-                            continue
-                        widget.destroy()
-                    peer_flashcard = peer_review_stack.pop()
-                    peer_question = Label(
-                        text_frame,
-                        text=f"{peer_flashcard.question}",
-                        font=("Helvetica", 12, "bold"),
-                        wraplength=500,
-                        bg="#e6e7f0"
-                        )
-                    peer_question.pack()
-                    peer_answer = Label(
-                        text_frame,
-                        text=f"{peer_flashcard.answer}",
-                        font=("Helvetica", 12),
-                        wraplength=500,
-                        bg="#e6e7f0"
-                        )
-                    peer_answer.pack()
-                    peer_header = Label(
-                        text_frame,
-                        text="You wrote:",
-                        font=("Helvetica", 9),
-                        bg="#e6e7f0"
-                        )
-                    peer_header.pack()
-                    peer_output = Label(
-                        text_frame,
-                        text=f"{peer_flashcard.input}",
-                        font=("Helvetica", 13),
-                        bg="#e6e7f0",
-                        wraplength=450
-                        )
-                    peer_output.pack()
-                    peer_subheader = Label(
-                        text_frame,
-                        text="Select a friend to send your answer to:",
-                        font=("Helvetica", 9),
-                        bg="#e6e7f0"
-                        )
-                    peer_subheader.pack()
-                    peers = fetchfriend_info()
-                    friend_scrollbar = Scrollbar(text_frame)
-                    friend_scrollbar.pack(side=RIGHT, fill=Y)
-                    peers_list = Listbox(text_frame, yscrollcommand=friend_scrollbar.set, bg="#e6e7f0", font=("Helvetica", 10), relief=FLAT, selectmode=SINGLE, selectbackground="#bfc0c7")
-                    for peer in peers:
-                        peers_list.insert(END, peer[0])
-                    peers_list.pack(fill=BOTH, expand=TRUE)
-                    friend_scrollbar.config(command=peers_list.yview)
-                    send_button = Button(
-                        button_frame,
-                        text="Send",
-                        font=("Helvetica",9),
-                        bg="#bfc0c7",
-                        command=check_peer
-                        )
-                    send_button.pack(side=LEFT)
+                    if peer_counter < number_stacked:
+                        for widget in text_frame.winfo_children():
+                            if not isinstance(widget, (Label)):
+                                continue
+                            widget.destroy()
+                        for widget in button_frame.winfo_children():
+                            if not isinstance(widget, (Button)):
+                                continue
+                            widget.destroy()
+                        for widget in text_frame.winfo_children():
+                            if not isinstance(widget, (Scrollbar)):
+                                continue
+                            widget.destroy()
+                        for widget in text_frame.winfo_children():
+                            if not isinstance(widget, (Listbox)):
+                                continue
+                            widget.destroy()
+                        peer_flashcard = peer_review_stack.pop()
+                        peer_question = Label(
+                            text_frame,
+                            text=f"{peer_flashcard.question}",
+                            font=("Helvetica", 12, "bold"),
+                            wraplength=500,
+                            bg="#e6e7f0"
+                            )
+                        peer_question.pack()
+                        peer_answer = Label(
+                            text_frame,
+                            text=f"{peer_flashcard.answer}",
+                            font=("Helvetica", 12),
+                            wraplength=500,
+                            bg="#e6e7f0"
+                            )
+                        peer_answer.pack()
+                        peer_header = Label(
+                            text_frame,
+                            text="You wrote:",
+                            font=("Helvetica", 9),
+                            bg="#e6e7f0"
+                            )
+                        peer_header.pack()
+                        peer_output = Label(
+                            text_frame,
+                            text=f"{peer_flashcard.input}",
+                            font=("Helvetica", 13),
+                            bg="#e6e7f0",
+                            wraplength=450
+                            )
+                        peer_output.pack()
+                        peer_subheader = Label(
+                            text_frame,
+                            text="Select a friend to send your answer to:",
+                            font=("Helvetica", 9),
+                            bg="#e6e7f0"
+                            )
+                        peer_subheader.pack()
+                        peers = fetchfriend_info()
+                        friend_scrollbar = Scrollbar(text_frame)
+                        friend_scrollbar.pack(side=RIGHT, fill=Y)
+                        peers_list = Listbox(text_frame, yscrollcommand=friend_scrollbar.set, bg="#e6e7f0", font=("Helvetica", 10), relief=FLAT, selectmode=SINGLE, selectbackground="#bfc0c7")
+                        for peer in peers:
+                            peers_list.insert(END, peer[0])
+                        peers_list.pack(fill=BOTH, expand=TRUE)
+                        friend_scrollbar.config(command=peers_list.yview)
+                        send_button = Button(
+                            button_frame,
+                            text="Send",
+                            font=("Helvetica",9),
+                            bg="#bfc0c7",
+                            command=lambda:check_peer(peer_flashcard, peer_counter, number_stacked)
+                            )
+                        send_button.pack(side=LEFT)
+                    else:
+                        for widget in text_frame.winfo_children():
+                            if not isinstance(widget, (Label)):
+                                continue
+                            widget.destroy()
+                        for widget in button_frame.winfo_children():
+                            if not isinstance(widget, (Button)):
+                                continue
+                            widget.destroy()
+                        for widget in text_frame.winfo_children():
+                            if not isinstance(widget, (Scrollbar)):
+                                continue
+                            widget.destroy()
+                        for widget in text_frame.winfo_children():
+                            if not isinstance(widget, (Listbox)):
+                                continue
+                            widget.destroy()
+                        review_show()
                 number_stacked = len(peer_review_stack.getStack())
                 if number_stacked > 0:
-                    peer_review()
+                    peer_counter = 0
+                    peer_review(peer_counter, number_stacked)
                 else:
-                    mycursor.execute("SELECT priority FROM user_flashcard INNER JOIN user_deck ON user_deck.deckID = user_flashcard.deckID INNER JOIN user_account ON user_account.accountID = user_deck.accountID WHERE user_deck.deckName = %s AND user_account.username = %s", (selectedDeck, usernameLogin))
-                    result = mycursor.fetchall()
-                    flashcards_number = len(result)
-                    flashcards_sum = 0
-                    for i in range (0, len(result)):
-                        if result[i][0] == -1:
-                            flashcards_sum += 7 #weighed(?) priority for non-used cards
-                        else:
-                            flashcards_sum += result[i][0]
-                    score = round((10 - (flashcards_sum / flashcards_number)) * 10, 1) #make it so a flashcard has to have a certain number of "easy"s to immediately be considered 100%?  or mkae an "ease" value which increases/decreases with each "easy" - max 100 or smth, and then combine this to find a reliable priority in the queue - although above algorith already kinda solves this
-                    score = max(0.0, min(100.0, score)) #not even necessary i think but idk just in case
-                    mycursor.execute("UPDATE user_deck INNER JOIN user_account ON user_account.accountID = user_deck.accountID SET user_deck.score = %s WHERE user_deck.deckName = %s AND user_account.username = %s", (score, selectedDeck, usernameLogin))
-                    mydb.commit()
-                    grade_title = Label(
-                        text_frame,
-                        text="Overall Deck Score",
-                        font=("Helvetica",17),
-                        bg="#e6e7f0"
-                        )
-                    grade_title.pack()
-                    score_title = Label(
-                        text_frame,
-                        text=f"{score}%",
-                        font=("Helvetica",20,"bold"),
-                        bg="#e6e7f0"
-                        )
-                    score_title.pack()
-                    again_button = Button(
-                        button_frame,
-                        text="Review Again",
-                        font=("Helvetica",9),
-                        bg="#bfc0c7",
-                        command=lambda:review_again(flashcards_reviewed, reviewed_list)
-                        )
-                    again_button.pack(side=LEFT)
-                    finish_button = Button( #finish button allows all data to be uploaded to mysql database
-                        button_frame,
-                        text="Finish",
-                        font=("Helvetica",9),
-                        bg="#bfc0c7",
-                        command=finish_review
-                        )
-                    finish_button.pack(side=LEFT)
+                    review_show()
             def finish_review():
                 review_flashcards_page.destroy()
                 deckList.bind("<Double-1>", deckSelected)
@@ -1190,157 +1219,6 @@ class collectionPage(page):
 class inboxPage(page):
     def __init__(self, *args, **kwargs):
         page.__init__(self, *args, **kwargs)
-        inboxNotification1 = Frame(self, bg="#d7d8e0")
-        inboxIcon1 = Label(
-            inboxNotification1,
-            bitmap="warning",
-            bg="#d7d8e0"
-            )
-        inboxIcon1.pack(side=LEFT)
-        inboxName1 = Label(
-            inboxNotification1,
-            text="New marking request",
-            font=("Helvetica", 9, "bold"),
-            bg="#d7d8e0"
-            )
-        inboxName1.pack(side=LEFT)
-        inboxNotification1.pack(side=TOP, fill=X)
-        inboxContent1 = Frame(self, bg="#e6e7f0")
-        inboxContentname1 = Label(
-            inboxContent1,
-            textvariable=user1,
-            font=("Helvetica",8,"bold"),
-            bg="#e6e7f0"
-            )
-        inboxContentname1.pack(side=LEFT)
-        inboxContentinfo1 = Label(
-            inboxContent1,
-            text="sent you 5 marking requests.",
-            font=("Helvetica", 8),
-            bg="#e6e7f0"
-            )
-        inboxContentinfo1.pack(side=LEFT)
-        inboxContent1.pack(side=TOP, fill=X)
-        inboxButtons1 = Frame(self, bg="#e6e7f0")
-        inboxButtonview1 = Button(
-            inboxButtons1,
-            text="View flashcards",
-            font=("Helvetica", 7),
-            bg="#d7d8e0"
-            )
-        inboxButtonview1.pack(side=LEFT)
-        inboxButtonaccept1 = Button(
-            inboxButtons1,
-            text="Accept",
-            font=("Helvetica", 7),
-            bg="#d7d8e0"
-            )
-        inboxButtonaccept1.pack(side=LEFT)
-        inboxButtondeny1 = Button(
-            inboxButtons1,
-            text="Deny",
-            font=("Helvetica", 7),
-            bg="#d7d8e0"
-            )
-        inboxButtondeny1.pack(side=LEFT)
-        inboxDate1 = Label(
-            inboxButtons1,
-            text="36 minutes ago",
-            font=("Helvetica", 7),
-            bg="#e6e7f0"
-            )
-        inboxDate1.pack(side=LEFT)
-        inboxButtons1.pack(side=TOP, fill=X)
-        inboxMidfiller1 = Label(
-            self,
-            text=" ",
-            font=("Helvetica", 1),
-            bg="#aeafb5"
-            )
-        inboxMidfiller1.pack(side=TOP, fill=X)
-        inboxNotification2 = Frame(self, bg="#e6e7f0")
-        inboxName2 = Label(
-            inboxNotification2,
-            text="Marking feedback",
-            font=("Helvetica", 9),
-            bg="#e6e7f0"
-            )
-        inboxName2.pack(side=LEFT)
-        inboxNotification2.pack(side=TOP, fill=X)
-        inboxContent2 = Frame(self)
-        inboxContentname2 = Label(
-            inboxContent2,
-            textvariable=user2,
-            font=("Helvetica",8,"bold"),
-            )
-        inboxContentname2.pack(side=LEFT)
-        inboxContentinfo2 = Label(
-            inboxContent2,
-            text="has reviewed your 5 flashcard answers.",
-            font=("Helvetica", 8),
-            )
-        inboxContentinfo2.pack(side=LEFT)
-        inboxContent2.pack(side=TOP, fill=X)
-        inboxButtons2 = Frame(self)
-        inboxButtonview2 = Button(
-            inboxButtons2,
-            text="View feedback",
-            font=("Helvetica", 7),
-            bg="#e6e7f0"
-            )
-        inboxButtonview2.pack(side=LEFT)
-        inboxDate2 = Label(
-            inboxButtons2,
-            text="5 days ago",
-            font=("Helvetica", 7),
-            )
-        inboxDate2.pack(side=LEFT)
-        inboxButtons2.pack(side=TOP, fill=X)
-        inboxMidfiller2 = Label(
-            self,
-            text=" ",
-            font=("Helvetica", 1),
-            bg="#aeafb5"
-            )
-        inboxMidfiller2.pack(side=TOP, fill=X)
-        inboxNotification3 = Frame(self, bg="#e6e7f0")
-        inboxName3 = Label(
-            inboxNotification3,
-            text="Marking request denied",
-            font=("Helvetica", 9),
-            bg="#e6e7f0"
-            )
-        inboxName3.pack(side=LEFT)
-        inboxNotification3.pack(side=TOP, fill=X)
-        inboxContent3 = Frame(self)
-        inboxContentname3 = Label(
-            inboxContent3,
-            textvariable=user3,
-            font=("Helvetica",8,"bold"),
-            )
-        inboxContentname3.pack(side=LEFT)
-        inboxContentinfo3 = Label(
-            inboxContent3,
-            text="denied your 3 marking requests.",
-            font=("Helvetica", 8),
-            )
-        inboxContentinfo3.pack(side=LEFT)
-        inboxContent3.pack(side=TOP, fill=X)
-        inboxButtons3 = Frame(self)
-        inboxButtonview3 = Button(
-            inboxButtons3,
-            text="Send requests to another user",
-            font=("Helvetica", 7),
-            bg="#e6e7f0"
-            )
-        inboxButtonview3.pack(side=LEFT)
-        inboxDate3 = Label(
-            inboxButtons3,
-            text="24/10/23",
-            font=("Helvetica", 7),
-            )
-        inboxDate3.pack(side=LEFT)
-        inboxButtons3.pack(side=TOP, fill=X)
     def showDashboard(self, usernameLogin):
         page2.show()
 
