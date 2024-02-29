@@ -12,6 +12,8 @@ mycursor = mydb.cursor(buffered=True)
 #make gui look neater, less empty spaces (side=TOP, fill=X)
 #use sql order by if necessary + regular refreshes of pages
 #make windows same size esp in flashcard reviewing ,,,,,,,maybe?
+#style sheets for tkinter in repeating code for widgets?
+#check sql data type length and that all exceptions are handled accordingly when signig up or smth/creating stuff
 window = Tk()
 window.title("Spaced Repetition Flashcard Software")
 #window.iconbitmap("librarypc.ico")
@@ -66,7 +68,7 @@ class CircularPriorityQueue:
                     self.rear = (self.rear + 1) % self.maxsize
                     self.queue[self.rear] = item
                     self.queue[position] = flashcard
-            else: #shuffle all flashcards after target position along 1 #simplify all this
+            else: #shuffle all flashcards after target position along 1 #simplify all this?
                 card_position = self.rear
                 while card_position != (position - 1) % self.maxsize:
                     item = self.queue[card_position]
@@ -120,6 +122,8 @@ class Stack:
             return None
         else:
             return self.stack[self.top]
+    def getStack(self):
+        return list((flashcard.id, flashcard.question, flashcard.input) for flashcard in self.stack if flashcard is not None)
 
 class page(Frame):
     def __init__(self, *args, **kwargs):
@@ -131,165 +135,8 @@ user1 = StringVar(window,"user_friend") #replace and get rid of
 user2 = StringVar(window,"user_friend_2") #replace
 user3 = StringVar(window,"user_friend_3") #replace
 
-def inboxWindow():
-    inboxTab = Toplevel()
-    inboxTab.title("Inbox (1)")
-    inboxTab.resizable(False, False)
-    inboxNotification1 = Frame(inboxTab, bg="#d7d8e0")
-    inboxIcon1 = Label(
-        inboxNotification1,
-        bitmap="warning",
-        bg="#d7d8e0"
-        )
-    inboxIcon1.pack(side=LEFT)
-    inboxName1 = Label(
-        inboxNotification1,
-        text="New marking request",
-        font=("Helvetica", 9, "bold"),
-        bg="#d7d8e0"
-        )
-    inboxName1.pack(side=LEFT)
-    inboxNotification1.pack(side=TOP, fill=X)
-    inboxContent1 = Frame(inboxTab, bg="#e6e7f0")
-    inboxContentname1 = Label(
-        inboxContent1,
-        textvariable=user1,
-        font=("Helvetica",8,"bold"),
-        bg="#e6e7f0"
-        )
-    inboxContentname1.pack(side=LEFT)
-    inboxContentinfo1 = Label(
-        inboxContent1,
-        text="sent you 5 marking requests.",
-        font=("Helvetica", 8),
-        bg="#e6e7f0"
-        )
-    inboxContentinfo1.pack(side=LEFT)
-    inboxContent1.pack(side=TOP, fill=X)
-    inboxButtons1 = Frame(inboxTab, bg="#e6e7f0")
-    inboxButtonview1 = Button(
-        inboxButtons1,
-        text="View flashcards",
-        font=("Helvetica", 7),
-        bg="#d7d8e0"
-        )
-    inboxButtonview1.pack(side=LEFT)
-    inboxButtonaccept1 = Button(
-        inboxButtons1,
-        text="Accept",
-        font=("Helvetica", 7),
-        bg="#d7d8e0"
-        )
-    inboxButtonaccept1.pack(side=LEFT)
-    inboxButtondeny1 = Button(
-        inboxButtons1,
-        text="Deny",
-        font=("Helvetica", 7),
-        bg="#d7d8e0"
-        )
-    inboxButtondeny1.pack(side=LEFT)
-    inboxDate1 = Label(
-        inboxButtons1,
-        text="36 minutes ago",
-        font=("Helvetica", 7),
-        bg="#e6e7f0"
-        )
-    inboxDate1.pack(side=LEFT)
-    inboxButtons1.pack(side=TOP, fill=X)
-    inboxMidfiller1 = Label(
-        inboxTab,
-        text=" ",
-        font=("Helvetica", 1),
-        bg="#aeafb5"
-        )
-    inboxMidfiller1.pack(side=TOP, fill=X)
-    inboxNotification2 = Frame(inboxTab, bg="#e6e7f0")
-    inboxName2 = Label(
-        inboxNotification2,
-        text="Marking feedback",
-        font=("Helvetica", 9),
-        bg="#e6e7f0"
-        )
-    inboxName2.pack(side=LEFT)
-    inboxNotification2.pack(side=TOP, fill=X)
-    inboxContent2 = Frame(inboxTab)
-    inboxContentname2 = Label(
-        inboxContent2,
-        textvariable=user2,
-        font=("Helvetica",8,"bold"),
-        )
-    inboxContentname2.pack(side=LEFT)
-    inboxContentinfo2 = Label(
-        inboxContent2,
-        text="has reviewed your 5 flashcard answers.",
-        font=("Helvetica", 8),
-        )
-    inboxContentinfo2.pack(side=LEFT)
-    inboxContent2.pack(side=TOP, fill=X)
-    inboxButtons2 = Frame(inboxTab)
-    inboxButtonview2 = Button(
-        inboxButtons2,
-        text="View feedback",
-        font=("Helvetica", 7),
-        bg="#e6e7f0"
-        )
-    inboxButtonview2.pack(side=LEFT)
-    inboxDate2 = Label(
-        inboxButtons2,
-        text="5 days ago",
-        font=("Helvetica", 7),
-        )
-    inboxDate2.pack(side=LEFT)
-    inboxButtons2.pack(side=TOP, fill=X)
-    inboxMidfiller2 = Label(
-        inboxTab,
-        text=" ",
-        font=("Helvetica", 1),
-        bg="#aeafb5"
-        )
-    inboxMidfiller2.pack(side=TOP, fill=X)
-    inboxNotification3 = Frame(inboxTab, bg="#e6e7f0")
-    inboxName3 = Label(
-        inboxNotification3,
-        text="Marking request denied",
-        font=("Helvetica", 9),
-        bg="#e6e7f0"
-        )
-    inboxName3.pack(side=LEFT)
-    inboxNotification3.pack(side=TOP, fill=X)
-    inboxContent3 = Frame(inboxTab)
-    inboxContentname3 = Label(
-        inboxContent3,
-        textvariable=user3,
-        font=("Helvetica",8,"bold"),
-        )
-    inboxContentname3.pack(side=LEFT)
-    inboxContentinfo3 = Label(
-        inboxContent3,
-        text="denied your 3 marking requests.",
-        font=("Helvetica", 8),
-        )
-    inboxContentinfo3.pack(side=LEFT)
-    inboxContent3.pack(side=TOP, fill=X)
-    inboxButtons3 = Frame(inboxTab)
-    inboxButtonview3 = Button(
-        inboxButtons3,
-        text="Send requests to another user",
-        font=("Helvetica", 7),
-        bg="#e6e7f0"
-        )
-    inboxButtonview3.pack(side=LEFT)
-    inboxDate3 = Label(
-        inboxButtons3,
-        text="24/10/23",
-        font=("Helvetica", 7),
-        )
-    inboxDate3.pack(side=LEFT)
-    inboxButtons3.pack(side=TOP, fill=X) #inbox window
-
 def settingsWindow():
     global settingsButtonon1
-    global settingsButtonmutual1
     global settingsButtonoff1
     global settingsButtonon2
     global settingsButtonoff2
@@ -314,14 +161,6 @@ def settingsWindow():
         command=friendOnPressed
         )
     settingsButtonon1.pack(side=LEFT)
-    settingsButtonmutual1 = Button(
-        settingsButtons1,
-        text="Mutual friends only",
-        font=("Helvetica", 9),
-        bg="#d7d8e0",
-        command=friendMutualPressed
-        )
-    settingsButtonmutual1.pack(side=LEFT)
     settingsButtonoff1 = Button(
         settingsButtons1,
         text="Off",
@@ -336,8 +175,6 @@ def settingsWindow():
     friendResult = mycursor.fetchone()
     if friendResult == ('on',):
         settingsButtonon1.config(bg="#ffffff", relief=SUNKEN)
-    elif friendResult == ('mutual',):
-        settingsButtonmutual1.config(bg="#ffffff", relief=SUNKEN)
     elif friendResult == ('off',):
         settingsButtonoff1.config(bg="#ffffff", relief=SUNKEN)
 
@@ -379,23 +216,13 @@ def settingsWindow():
 def friendOnPressed():
     if settingsButtonon1.cget("bg") == "#d7d8e0":
         settingsButtonon1.config(bg="#ffffff", relief=SUNKEN)
-        settingsButtonmutual1.config(bg="#d7d8e0", relief=RAISED)
         settingsButtonoff1.config(bg="#d7d8e0", relief=RAISED)
         mycursor.execute("UPDATE user_account SET friendRequest = 'on' WHERE username = %s", (usernameLogin,))
-        mydb.commit()
-
-def friendMutualPressed():
-    if settingsButtonmutual1.cget("bg") == "#d7d8e0":
-        settingsButtonon1.config(bg="#d7d8e0", relief=RAISED)
-        settingsButtonmutual1.config(bg="#ffffff", relief=SUNKEN)
-        settingsButtonoff1.config(bg="#d7d8e0", relief=RAISED)
-        mycursor.execute("UPDATE user_account SET friendRequest = 'mutual' WHERE username = %s", (usernameLogin,))
         mydb.commit()
 
 def friendOffPressed():
     if settingsButtonoff1.cget("bg") == "#d7d8e0":
         settingsButtonon1.config(bg="#d7d8e0", relief=RAISED)
-        settingsButtonmutual1.config(bg="#d7d8e0", relief=RAISED)
         settingsButtonoff1.config(bg="#ffffff", relief=SUNKEN)
         mycursor.execute("UPDATE user_account SET friendRequest = 'off' WHERE username = %s", (usernameLogin,))
         mydb.commit()
@@ -434,24 +261,6 @@ def deckWindow():
     deckEntry1 = Entry(deckEnter1)
     deckEntry1.pack(side=LEFT)
     deckEnter1.pack(side=TOP, fill=X)
-    deckSection2 = Frame(deckTab, bg="#d7d8e0")
-    deckOption2 = Label(
-        deckSection2,
-        text="Privacy setting",
-        font=("Helvetica", 11),
-        bg="#d7d8e0"
-        )
-    deckOption2.pack(side=LEFT)
-    deckSection2.pack(side=TOP, fill=X)
-    deckEnter2 = Frame(deckTab, bg="#e6e7f0")
-    deckEntry2 = ttk.Combobox(
-        deckEnter2, 
-        state="readonly", 
-        values=["Public", "Friends only", "Private"]
-        )
-    deckEntry2.set("Public")
-    deckEntry2.pack(side=LEFT)
-    deckEnter2.pack(side=TOP, fill=X)
     deckCreateButton = Button(
         deckTab,
         text="Create",
@@ -463,20 +272,13 @@ def deckWindow():
 
 def createDeck():
     deckName = deckEntry1.get() #increase cjaracters in deck name
-    deckSetting = deckEntry2.get()
-    if deckSetting == "Public":
-        deckPrivacy = "public"
-    elif deckSetting == "Friends only":
-        deckPrivacy = "friends"
-    elif deckSetting == "Private":
-        deckPrivacy = "private"
     mycursor.execute("SELECT * FROM user_deck INNER JOIN user_account ON user_account.accountID = user_deck.accountID WHERE user_deck.deckName = %s AND user_account.username = %s", (deckName, usernameLogin)) #case sensitive
     if mycursor.fetchone():
-        messagebox.showerror("Invalid Deck Name", "You already have a deck with this name.")
+        messagebox.showerror("Invalid Deck Name", "You already have a deck with this name.")#add more constraints?
     else:
-        mycursor.execute("INSERT INTO user_deck (accountID, deckName, privacy) VALUES ((SELECT user_account.accountID FROM user_account WHERE user_account.username = %s), %s, %s)", (usernameLogin, deckName, deckPrivacy))
+        mycursor.execute("INSERT INTO user_deck (accountID, deckName) VALUES ((SELECT user_account.accountID FROM user_account WHERE user_account.username = %s), %s)", (usernameLogin, deckName))
         mydb.commit()
-        page2.showDashboard(usernameLogin) #refresh
+        page1.showDashboard(usernameLogin) #refresh
         deckTab.destroy()
 
 def deckSelected(event): #event taken as an argument due to bind
@@ -505,16 +307,9 @@ def deckSelected(event): #event taken as an argument due to bind
         xscrollbar.config(command=flashcard_list.xview)
     global selectedDeck
     selectedDeck = "".join(deckList.get(i) for i in deckList.curselection())
-    mycursor.execute("SELECT privacy, score FROM user_deck INNER JOIN user_account ON user_account.accountID = user_deck.accountID WHERE user_deck.deckName=%s AND user_account.username=%s", (selectedDeck, usernameLogin)) #make sure all sql string input are unique, as to not accidentally fetch someone else's deck
+    mycursor.execute("SELECT score FROM user_deck INNER JOIN user_account ON user_account.accountID = user_deck.accountID WHERE user_deck.deckName=%s AND user_account.username=%s", (selectedDeck, usernameLogin)) #make sure all sql string input are unique, as to not accidentally fetch someone else's deck
     deck_results = mycursor.fetchone()
-    deckSetting = deck_results[0]
-    deck_score = deck_results[1]
-    if deckSetting == "public":
-        deckPrivacy = "Public"
-    elif deckSetting == "friends":
-        deckPrivacy = "Friends Only"
-    elif deckSetting == "private":
-        deckPrivacy = "Private"
+    deck_score = deck_results[0]
     deckPage = Toplevel()
     deckPage.title(selectedDeck)
     deckPage.resizable(False, False)
@@ -555,18 +350,11 @@ def deckSelected(event): #event taken as an argument due to bind
     deckTitle.pack()
     deck_score_label = Label(
         mainPage,
-        text=f"Score: {deck_score}%",
-        font=("Helvetica", 12),
+        text=f"{deck_score}%",
+        font=("Helvetica", 12, "bold"),
         bg="#e6e7f0"
         )
     deck_score_label.pack()
-    deckPrivate = Label(
-        mainPage,
-        text=f"Privacy Setting: {deckPrivacy}",
-        font=("Helvetica", 12),
-        bg="#e6e7f0"
-        )
-    deckPrivate.pack()
     mainPage.pack(side=TOP, fill=X)
     list_page = Frame(deckFrame, bg="#e6e7f0")
     list_page.pack(side=TOP, fill=X)
@@ -637,6 +425,7 @@ def addFlashcards():
             flashcard_format = "occlusion"
         elif check_card_format == "Mathematics":
             flashcard_format = "maths"
+    global add_flashcard_page
     add_flashcard_page = Toplevel()
     add_flashcard_page.title(selectedDeck)
     add_flashcard_page.resizable(False, False)
@@ -687,8 +476,7 @@ def reviewFlashcards(deckPage, deckList):
         def answer_review(new_flashcard, question_header, input_text, flip_button, flashcards_reviewed, reviewed_list):
             def update_priority(new_flashcard, new_priority, reviewed_list):
                 new_priority = max(0, min(10, new_priority))
-                flashcard_id = new_flashcard.id
-                mycursor.execute("UPDATE user_flashcard SET priority = %s WHERE flashcardID = %s", (new_priority, flashcard_id)) #make sure flashcards with lowest priority arent just left at the back forever - if all cards are the same priority, randomise?#also document all this
+                mycursor.execute("UPDATE user_flashcard SET priority = %s WHERE flashcardID = %s", (new_priority, new_flashcard.id)) #make sure flashcards with lowest priority arent just left at the back forever - if all cards are the same priority, randomise?#also document all this
                 mydb.commit()
                 reviewed_list.append([new_flashcard.id, new_flashcard.question, new_flashcard.answer, new_flashcard.format, new_priority]) #no option to edit DURING reviews
             def flashcard_rating1(new_flashcard, reviewed_list):
@@ -716,8 +504,10 @@ def reviewFlashcards(deckPage, deckList):
                     new_priority = new_flashcard.priority - 2
                 update_priority(new_flashcard, new_priority, reviewed_list)
             def peer_rating_push(new_flashcard, reviewed_list):
-                peer_flashcard = PeerFlashcard(new_flashcard[0], new_flashcard[1], new_flashcard[2], new_flashcard[3], new_flashcard[4], user_input)
+                peer_flashcard = PeerFlashcard(new_flashcard.id, new_flashcard.question, new_flashcard.answer, new_flashcard.format, new_flashcard.priority, user_input)
                 peer_review_stack.push(peer_flashcard)
+                print(peer_review_stack.getStack())
+                reviewed_list.append([new_flashcard.id, new_flashcard.question, new_flashcard.answer, new_flashcard.format, new_flashcard.priority])
             user_input = input_text.get("1.0", "end-1c")
             question_header.pack_forget()
             flip_button.pack_forget()
@@ -788,52 +578,140 @@ def reviewFlashcards(deckPage, deckList):
             peer_button.pack(side=RIGHT)
         def question_review(flashcards_reviewed, reviewed_list):
             def end_review():
-                mycursor.execute("SELECT priority FROM user_flashcard INNER JOIN user_deck ON user_deck.deckID = user_flashcard.deckID INNER JOIN user_account ON user_account.accountID = user_deck.accountID WHERE user_deck.deckName = %s AND user_account.username = %s", (selectedDeck, usernameLogin))
-                result = mycursor.fetchall()
-                print(result)
-                flashcards_number = len(result)
-                flashcards_sum = 0
-                for i in range (0, len(result)):
-                    if result[i][0] == -1:
-                        flashcards_sum += 7 #weighed(?) priority for non-used cards
-                    else:
-                        flashcards_sum += result[i][0]
-                    print(result[i][0])
-                    print(flashcards_sum)
-                score = round((10 - (flashcards_sum / flashcards_number)) * 10, 1) #make it so a flashcard has to have a certain number of "easy"s to immediately be considered 100%?  or mkae an "ease" value which increases/decreases with each "easy" - max 100 or smth, and then combine this to find a reliable priority in the queue - although above algorith already kinda solves this
-                score = max(0.0, min(100.0, score)) #not even necessary i think but idk just in case
-                mycursor.execute("UPDATE user_deck INNER JOIN user_account ON user_account.accountID = user_deck.accountID SET user_deck.score = %s WHERE user_deck.deckName = %s AND user_account.username = %s", (score, selectedDeck, usernameLogin))
-                mydb.commit()
-                grade_title = Label(
-                    text_frame,
-                    text="Overall Deck Score",
-                    font=("Helvetica",17),
-                    bg="#e6e7f0"
-                    )
-                grade_title.pack()
-                score_title = Label(
-                    text_frame,
-                    text=f"{score}%",
-                    font=("Helvetica",20,"bold"),
-                    bg="#e6e7f0"
-                    )
-                score_title.pack()
-                again_button = Button(
-                    button_frame,
-                    text="Review Again",
-                    font=("Helvetica",9),
-                    bg="#bfc0c7",
-                    command=lambda:review_again(flashcards_reviewed, reviewed_list)
-                    )
-                again_button.pack(side=LEFT)
-                finish_button = Button( #finish button allows all data to be uploaded to mysql database
-                    button_frame,
-                    text="Finish",
-                    font=("Helvetica",9),
-                    bg="#bfc0c7",
-                    command=finish_review
-                    )
-                finish_button.pack(side=LEFT)
+                def peer_review():
+                    def fetchfriend_info():
+                        mycursor.execute("SELECT ua2.username FROM user_account ua1 INNER JOIN user_friend ON user_friend.accountID = ua1.accountID INNER JOIN user_account ua2 ON ua2.accountID = user_friend.accountID2 WHERE ua1.username = %s", (usernameLogin,))
+                        return mycursor.fetchall()
+                    def check_peer():
+                        selected_indices = peers_list.curselection()
+                        if selected_indices:
+                            selected_peer = "".join(peers_list.get(i) for i in selected_indices)
+                            mycursor.execute("SELECT * FROM user_account WHERE username = %s AND markingRequest = 'off'", (selected_peer,))
+                            if mycursor.fetchone():
+                                messagebox.showerror("Invalid Friend", "This user has peer marking turned off.")
+                            else:
+                                #sql...#check if user already has submission for the same flashcard (doesn't matter if same user or not)
+                                messagebox.showinfo("Marking Request Sent", f"Your marking request to {selected_peer} has been sent and is now pending a response.")
+                        else:
+                            messagebox.showerror("Invalid Friend", "No friend has been selected.")
+                    for widget in text_frame.winfo_children():
+                        if not isinstance(widget, (Label)):
+                            continue
+                        widget.destroy()
+                    for widget in button_frame.winfo_children():
+                        if not isinstance(widget, (Button)):
+                            continue
+                        widget.destroy()
+                    for widget in button_frame.winfo_children():
+                        if not isinstance(widget, (Scrollbar)):
+                            continue
+                        widget.destroy()
+                    for widget in button_frame.winfo_children():
+                        if not isinstance(widget, (Listbox)):
+                            continue
+                        widget.destroy()
+                    peer_flashcard = peer_review_stack.pop()
+                    peer_question = Label(
+                        text_frame,
+                        text=f"{peer_flashcard.question}",
+                        font=("Helvetica", 12, "bold"),
+                        wraplength=500,
+                        bg="#e6e7f0"
+                        )
+                    peer_question.pack()
+                    peer_answer = Label(
+                        text_frame,
+                        text=f"{peer_flashcard.answer}",
+                        font=("Helvetica", 12),
+                        wraplength=500,
+                        bg="#e6e7f0"
+                        )
+                    peer_answer.pack()
+                    peer_header = Label(
+                        text_frame,
+                        text="You wrote:",
+                        font=("Helvetica", 9),
+                        bg="#e6e7f0"
+                        )
+                    peer_header.pack()
+                    peer_output = Label(
+                        text_frame,
+                        text=f"{peer_flashcard.input}",
+                        font=("Helvetica", 13),
+                        bg="#e6e7f0",
+                        wraplength=450
+                        )
+                    peer_output.pack()
+                    peer_subheader = Label(
+                        text_frame,
+                        text="Select a friend to send your answer to:",
+                        font=("Helvetica", 9),
+                        bg="#e6e7f0"
+                        )
+                    peer_subheader.pack()
+                    peers = fetchfriend_info()
+                    friend_scrollbar = Scrollbar(text_frame)
+                    friend_scrollbar.pack(side=RIGHT, fill=Y)
+                    peers_list = Listbox(text_frame, yscrollcommand=friend_scrollbar.set, bg="#e6e7f0", font=("Helvetica", 10), relief=FLAT, selectmode=SINGLE, selectbackground="#bfc0c7")
+                    for peer in peers:
+                        peers_list.insert(END, peer[0])
+                    peers_list.pack(fill=BOTH, expand=TRUE)
+                    friend_scrollbar.config(command=peers_list.yview)
+                    send_button = Button(
+                        button_frame,
+                        text="Send",
+                        font=("Helvetica",9),
+                        bg="#bfc0c7",
+                        command=check_peer
+                        )
+                    send_button.pack(side=LEFT)
+                number_stacked = len(peer_review_stack.getStack())
+                if number_stacked > 0:
+                    peer_review()
+                else:
+                    mycursor.execute("SELECT priority FROM user_flashcard INNER JOIN user_deck ON user_deck.deckID = user_flashcard.deckID INNER JOIN user_account ON user_account.accountID = user_deck.accountID WHERE user_deck.deckName = %s AND user_account.username = %s", (selectedDeck, usernameLogin))
+                    result = mycursor.fetchall()
+                    flashcards_number = len(result)
+                    flashcards_sum = 0
+                    for i in range (0, len(result)):
+                        if result[i][0] == -1:
+                            flashcards_sum += 7 #weighed(?) priority for non-used cards
+                        else:
+                            flashcards_sum += result[i][0]
+                    score = round((10 - (flashcards_sum / flashcards_number)) * 10, 1) #make it so a flashcard has to have a certain number of "easy"s to immediately be considered 100%?  or mkae an "ease" value which increases/decreases with each "easy" - max 100 or smth, and then combine this to find a reliable priority in the queue - although above algorith already kinda solves this
+                    score = max(0.0, min(100.0, score)) #not even necessary i think but idk just in case
+                    mycursor.execute("UPDATE user_deck INNER JOIN user_account ON user_account.accountID = user_deck.accountID SET user_deck.score = %s WHERE user_deck.deckName = %s AND user_account.username = %s", (score, selectedDeck, usernameLogin))
+                    mydb.commit()
+                    grade_title = Label(
+                        text_frame,
+                        text="Overall Deck Score",
+                        font=("Helvetica",17),
+                        bg="#e6e7f0"
+                        )
+                    grade_title.pack()
+                    score_title = Label(
+                        text_frame,
+                        text=f"{score}%",
+                        font=("Helvetica",20,"bold"),
+                        bg="#e6e7f0"
+                        )
+                    score_title.pack()
+                    again_button = Button(
+                        button_frame,
+                        text="Review Again",
+                        font=("Helvetica",9),
+                        bg="#bfc0c7",
+                        command=lambda:review_again(flashcards_reviewed, reviewed_list)
+                        )
+                    again_button.pack(side=LEFT)
+                    finish_button = Button( #finish button allows all data to be uploaded to mysql database
+                        button_frame,
+                        text="Finish",
+                        font=("Helvetica",9),
+                        bg="#bfc0c7",
+                        command=finish_review
+                        )
+                    finish_button.pack(side=LEFT)
             def finish_review():
                 review_flashcards_page.destroy()
                 deckList.bind("<Double-1>", deckSelected)
@@ -890,7 +768,7 @@ def reviewFlashcards(deckPage, deckList):
         deck_size = len(flashcards)
         flashcard_queue = CircularPriorityQueue(deck_size)
         queue_flashcards(flashcards, flashcard_queue)
-        peer_review_stack = Stack(deck_size)
+        peer_review_stack = Stack(deck_size)#if user has no friends, tjhen cant add to peer mark stacj
         review_page = Frame(review_flashcards_page, bg="#e6e7f0")
         text_frame = Frame(review_page, bg="#e6e7f0")
         text_frame.pack(side=TOP, fill=X)
@@ -902,20 +780,22 @@ def reviewFlashcards(deckPage, deckList):
         question_review(flashcards_reviewed, reviewed_list)
     mycursor.execute("SELECT flashcardID FROM user_flashcard INNER JOIN user_deck ON user_deck.deckID = user_flashcard.deckID INNER JOIN user_account ON user_account.accountID = user_deck.accountID WHERE user_deck.deckName = %s AND user_account.username = %s", (selectedDeck, usernameLogin))
     if mycursor.fetchone():
+        if "add_flashcard_page" in globals():#check again
+            add_flashcard_page.destroy()
         deckPage.destroy()
         review_flashcards()
     else:
         messagebox.showerror("Empty Deck", "There are no flashcards in this deck.")
 
 def delete_deck(deckPage):
-    answer = messagebox.askokcancel("Delete Deck", f"Are you sure you want to delete {selectedDeck}? All of the flashcards it contains will also be deleted.")
-    if answer: #only 1 inner join able to be used in delete query
+    message_answer = messagebox.askokcancel("Delete Deck", f"Are you sure you want to delete {selectedDeck}? All of the flashcards it contains will also be deleted.")
+    if message_answer: #only 1 inner join able to be used in delete query
         mycursor.execute("DELETE user_flashcard FROM user_flashcard INNER JOIN user_deck ON user_deck.deckID = user_flashcard.deckID WHERE user_deck.deckName = %s AND user_deck.accountID IN (SELECT user_account.accountID FROM user_account WHERE user_account.username=%s)", (selectedDeck, usernameLogin))
         mydb.commit()
         mycursor.execute("DELETE user_deck FROM user_deck INNER JOIN user_account ON user_account.accountID = user_deck.accountID WHERE user_deck.deckName = %s AND user_account.username = %s", (selectedDeck, usernameLogin))
         mydb.commit()
         deckPage.destroy()
-        page2.showDashboard(usernameLogin) #refresh
+        page1.showDashboard(usernameLogin) #refresh
     else:
         pass
         
@@ -982,9 +862,7 @@ class signupPage(page):
         global newLastnameEntry
         global newUsernameEntry
         global newPasswordEntry
-        global confirmPasswordEntry 
-        global newRankDropdown
-        global newRankLabel
+        global confirmPasswordEntry
         global makeAccountButton
         global loginBackButton 
         signup = Frame(self)
@@ -1023,18 +901,6 @@ class signupPage(page):
         confirmPasswordLabel.pack()
         confirmPasswordEntry = Entry(signup, show="*")
         confirmPasswordEntry.pack()
-        newRankLabel = Label(
-            signup, 
-            text="Reason for using this software?"
-            )
-        newRankLabel.pack()
-        newRankDropdown = ttk.Combobox(
-            signup, 
-            state="readonly", 
-            values=["I'm a student", "I'm a teacher", "Other/Casual use"]
-            )
-        newRankDropdown.set("Other/Casual use")
-        newRankDropdown.pack()
         makeAccountButton = Button(
             signup, 
             text="Sign up", 
@@ -1050,7 +916,6 @@ class signupPage(page):
         signup.pack(fill=BOTH, expand=True)
     def registerUser(self):
         global newUsername
-        global newRank
         global newFirstname
         global newLastname
         global hashPassword
@@ -1081,36 +946,9 @@ class signupPage(page):
                         if newPassword != confirmPassword:
                             messagebox.showerror("Invalid Password", "Passwords do not match.")
                         else:
-                            newRank = newRankDropdown.get()
-                            if newRank == "I'm a student" or newRank == "I'm a teacher":
-                                global newCentreEntry
-                                newRankLabel.pack_forget()
-                                newRankDropdown.pack_forget()
-                                makeAccountButton.pack_forget()
-                                loginBackButton.pack_forget()
-                                newCentreLabel = Label(signup, text="What is your school/tuition centre?")
-                                newCentreLabel.pack()
-                                newCentreEntry = Entry(signup)
-                                newCentreEntry.pack()
-                                makeEduAccountButton = Button(signup, text="Sign up", command=self.registerEduUser)
-                                makeEduAccountButton.pack()
-                            else: 
-                                userNewRank = "regular"
-                                mycursor.execute("INSERT INTO user_account (username, firstName, lastName, password, userRank) VALUES (%s, %s, %s, %s, %s)", (newUsername, newFirstname, newLastname, hashPassword, userNewRank))
-                                mydb.commit()
-                                self.showDetails()
-    def registerEduUser(self):
-        if newRank == "I'm a student":
-            userNewRank = "student"
-        elif newRank == "I'm a teacher":
-            userNewRank = "teacher"
-        newCentre = newCentreEntry.get()
-        if self.validateCentre(newCentre):
-            messagebox.showerror("Invalid Centre", "Centre must be between 1 and 100 characters in length.")
-        else:
-            mycursor.execute("INSERT INTO user_account (username, firstName, lastName, password, userRank, centre) VALUES (%s, %s, %s, %s, %s, %s)", (newUsername, newFirstname, newLastname, hashPassword, userNewRank, newCentre))
-            mydb.commit()
-            self.showDetails()
+                            mycursor.execute("INSERT INTO user_account (username, firstName, lastName, password) VALUES (%s, %s, %s, %s)", (newUsername, newFirstname, newLastname, hashPassword))
+                            mydb.commit()
+                            self.showDetails()
     def validateName(self, newName):
         if len(newName) > 30 or len(newName) < 1:
             return True
@@ -1130,160 +968,381 @@ class signupPage(page):
             return 2
     def hashingPassword(self, newPassword):
         return (hashlib.sha256(newPassword.encode("utf-8"))).hexdigest()
-    def validateCentre(self, newCentre):
-        if len(newCentre) > 100 or len(newCentre) < 1:
-            return True
     def showDetails(self):
         self.showLoginPage()
         messagebox.showinfo("Account Creation", f"Welcome {newUsername}!\nPlease log in with your new account.")
     def showLoginPage(self):
         page0.show()
-
-class feedPage(page):
+        
+class collectionPage(page):
     def __init__(self, *args, **kwargs):
         page.__init__(self, *args, **kwargs)
-        self.feed = Frame(self, bg="#e6e7f0")
-        self.profileUsername = StringVar()
-        self.profileUsername.set("placeholder")
+        self.fullname = StringVar()
+        self.friendsnumber = StringVar()
 
-        self.topButtons = Frame(self.feed, bg="#d7d8e0") #top buttons
+        self.collection=Frame(self, bg="#e6e7f0")
+
+        self.top_buttons = Frame(self.collection, bg="#d7d8e0") #top buttons
         self.usernameLabel = Label(
-            self.topButtons,
-            textvariable=self.profileUsername,
-            bg="#bfc0c7", 
-            font=("Helvetica",9),
-            pady=4
+            self.top_buttons,
+            textvariable=self.fullname,
+            bg="#d7d8e0", 
+            font=("Helvetica", 9)
             )
         self.usernameLabel.pack(side=LEFT)
-        self.inboxButton = Button(
-            self.topButtons, 
-            text="Inbox (1)", 
-            bg="#bfc0c7", 
-            font=("Helvetica",9),
-            command=inboxWindow
-            )
-        self.inboxButton.pack(side=LEFT)
         self.settingsButton = Button(
-            self.topButtons,
+            self.top_buttons,
             text="Settings",
             bg="#bfc0c7",
             font=("Helvetica", 9),
             command=settingsWindow
             )
-        self.settingsButton.pack(side=LEFT)
-        self.topButtons.pack(side=TOP, fill=X)
-
-        self.feedUsername1 = Frame(self.feed, bg="#e6e7f0") #1st update
-        self.feedName1 = Button(
-            self.feedUsername1,
-            textvariable=user1,
-            font=("Helvetica",10)
+        self.settingsButton.pack(side=RIGHT)
+        self.friends_button = Button(
+            self.top_buttons,
+            textvariable=self.friendsnumber,
+            bg="#bfc0c7",
+            font=("Helvetica", 9),
+            command=self.friendslist_page
             )
-        self.feedName1.pack(side=LEFT)
-        self.feedUsername1.pack(side=TOP, fill=X)
-
-        self.feedContent1 = Frame(self.feed, bg="#d7d8e0")
-        self.feedTime1 = Label(
-            self.feedContent1,
-            text="2 minutes ago",
-            font=("Helvetica", 10),
-            bg="#d7d8e0"
-            )
-        self.feedTime1.pack(side=LEFT)
-        self.feedContent1.pack(side=TOP, fill=X)
-
-        self.feedDeck1 = Frame(self.feed, bg="#d7d8e0")
-        self.feedDeckname1 = Label(
-            self.feedDeck1,
-            text="Computer Science Databases",
-            font=("Helvetica", 15),
-            bg="#d7d8e0"
-            )
-        self.feedDeckname1.pack(side=LEFT)
-        self.feedViewbutton1 = Button(
-            self.feedDeck1,
-            text="View deck",
-            font=("Helvetica", 8),
-            )
-        self.feedViewbutton1.pack(side=LEFT)
-        self.feedDeck1.pack(side=TOP, fill=X)
-
-        self.feed.pack(fill=BOTH, expand=True)
-    def fetchUserInfo(self, usernameLogin):
-        mycursor.execute("SELECT username, firstName, lastName, userRank, friendRequest, markingRequest, centre FROM user_account WHERE username=%s", (usernameLogin,))
-        userInfo = mycursor.fetchone()
-        return userInfo
-    def showDashboard(self, usernameLogin): #show method used on each page to refresh info? update sql queries if doesn't work
-        username1, firstName1, lastName1, userRank1, friendRequest1, markingRequest1, centre1 = self.fetchUserInfo(usernameLogin) #dont need to fetch all the data from the query??use [0] for only username perhaps?or when absolutely necessary
-        self.profileUsername.set(username1)
-        page1.show()
-        
-class collectionPage(page):
-    def __init__(self, *args, **kwargs):
-        page.__init__(self, *args, **kwargs)
-        self.collection=Frame(self, bg="#e6e7f0")
-
-        self.topButtons = Frame(self.collection, bg="#d7d8e0") #top buttons
-        self.deckButton = Button(
-            self.topButtons, 
+        self.friends_button.pack(side=RIGHT)
+        self.deck_button = Button(
+            self.top_buttons, 
             text="New Deck", 
             bg="#bfc0c7", 
             font=("Helvetica",9),
             command=deckWindow
             )
-        self.deckButton.pack(side=LEFT)
-        self.topButtons.pack(side=TOP, fill=X)
+        self.deck_button.pack(side=RIGHT)
+        self.top_buttons.pack(side=TOP, fill=X)
 
         self.collection.pack(fill=BOTH, expand=True)
+    def friendslist_page(self):
+        def fetch_friendinfo():
+            mycursor.execute("SELECT ua2.username FROM user_account ua1 INNER JOIN user_friend ON user_friend.accountID = ua1.accountID INNER JOIN user_account ua2 ON ua2.accountID = user_friend.accountID2 WHERE ua1.username = %s", (usernameLogin,))
+            return mycursor.fetchall()
+        def check_friend():
+            friend_username = self.friend_input.get()
+            if not friend_username:
+                messagebox.showerror("Invalid Username", "Username is empty.")
+            else:
+                if friend_username == usernameLogin:
+                    messagebox.showerror("Invalid Username", "You cannot send a friend request to yourself.")
+                else:
+                    mycursor.execute("SELECT * FROM user_account WHERE username = %s", (friend_username,))
+                    if mycursor.fetchone():
+                        mycursor.execute("SELECT * FROM user_friend INNER JOIN user_account ua1 ON ua1.accountID = user_friend.accountID INNER JOIN user_account ua2 ON ua2.accountID = user_friend.accountID2 WHERE ua1.username = %s AND ua2.username = %s", (usernameLogin, friend_username))
+                        if mycursor.fetchone(): #also for if you have already sent friend request, or the user has already sent friend request to you
+                            messagebox.showerror("Invalid Username", "You are already friends with this user.")
+                        else:
+                            mycursor.execute("SELECT * FROM user_friendrequest INNER JOIN user_account ua1 ON ua1.accountID = user_friendrequest.accountID INNER JOIN user_account ua2 ON ua2.accountID = user_friendrequest.accountID2 WHERE ua1.username = %s AND ua2.username = %s", (usernameLogin, friend_username))
+                            if mycursor.fetchone():
+                                messagebox.showerror("Invalid Username", "You have already sent a friend request to this user.")
+                            else:
+                                mycursor.execute("SELECT * FROM user_friendrequest INNER JOIN user_account ua1 ON ua1.accountID = user_friendrequest.accountID INNER JOIN user_account ua2 ON ua2.accountID = user_friendrequest.accountID2 WHERE ua1.username = %s AND ua2.username = %s", (friend_username, usernameLogin))
+                                if mycursor.fetchone():
+                                    messagebox.showerror("Invalid Username", "This user has already sent you a friend request.")
+                                else:
+                                    mycursor.execute("SELECT * FROM user_account WHERE username = %s AND friendRequest = 'off'", (friend_username,))
+                                    if mycursor.fetchone():
+                                        messagebox.showerror("Invalid Username", "This user has friend requests turned off.")
+                                    else:
+                                        mycursor.execute("INSERT INTO user_friendrequest (accountID, accountID2) VALUES ((SELECT user_account.accountID FROM user_account WHERE user_account.username = %s), (SELECT user_account.accountID FROM user_account WHERE user_account.username = %s))", (usernameLogin, friend_username))
+                                        mydb.commit()
+                                        messagebox.showinfo("Friend Request Sent", f"Your friend request to {friend_username} has been sent and is now pending.")
+                    else:
+                        messagebox.showerror("Invalid Username", "This user does not exist.")
+        def forget_request(request_username, inner_frame, requesting_user, accept_button, deny_button):
+            inner_frame.pack_forget()
+            requesting_user.pack_forget()
+            accept_button.pack_forget()
+            deny_button.pack_forget()
+            mycursor.execute("DELETE user_friendrequest FROM user_friendrequest INNER JOIN user_account ua1 ON ua1.accountID = user_friendrequest.accountID WHERE ua1.username = %s AND user_friendrequest.accountID2 = (SELECT ua2.accountID FROM user_account AS ua2 WHERE ua2.username=%s)", (request_username, usernameLogin))
+            mydb.commit()
+        def accept_request(request_username, inner_frame, requesting_user, accept_button, deny_button):
+            self.friends_list.insert(END, request_username)
+            mycursor.execute("INSERT INTO user_friend (accountID, accountID2) VALUES ((SELECT user_account.accountID FROM user_account WHERE user_account.username = %s), (SELECT user_account.accountID FROM user_account WHERE user_account.username = %s))", (usernameLogin, request_username))
+            mydb.commit()
+            mycursor.execute("INSERT INTO user_friend (accountID, accountID2) VALUES ((SELECT user_account.accountID FROM user_account WHERE user_account.username = %s), (SELECT user_account.accountID FROM user_account WHERE user_account.username = %s))", (request_username, usernameLogin))
+            mydb.commit()
+            forget_request(request_username, inner_frame, requesting_user, accept_button, deny_button)
+        self.friend_info = fetch_friendinfo()
+        self.friendrequest_info = self.fetch_friendrequestinfo()
+        self.friendslist = Toplevel()
+        self.friendslist.title("Friends")
+        self.friendslist.resizable(False, False)
+        self.main_list = Frame(self.friendslist, bg="#e6e7f0")
+        self.friendslist_header = Frame(self.main_list, bg="#d7d8e0")
+        self.friends_header = Label(
+            self.friendslist_header,
+            text="Friends list",
+            bg="#d7d8e0",
+            font=("Helvetica", 11)
+            )
+        self.friends_header.pack()
+        self.friendslist_header.pack(side=TOP, fill=X)
+        self.friendslist_frame = Frame(self.main_list, bg="#e6e7f0")
+        self.scrollbar = Scrollbar(self.friendslist_frame)
+        self.scrollbar.pack(side=RIGHT, fill=Y)
+        self.friends_list = Listbox(self.friendslist_frame, yscrollcommand=self.scrollbar.set, bg="#e6e7f0", font=("Helvetica", 9), relief=FLAT, selectmode=SINGLE, selectbackground="#e6e7f0", selectforeground="#000000", activestyle="none")
+        self.friends_list.pack(fill=BOTH, expand=TRUE)
+        self.scrollbar.config(command = self.friends_list.yview)
+        self.friendslist_frame.pack(fill=BOTH, expand=TRUE)
+        self.friendrequestslist_header = Frame(self.main_list, bg="#d7d8e0")
+        self.friendrequests_header = Label(
+            self.friendrequestslist_header,
+            text="Friend requests",
+            bg="#d7d8e0",
+            font=("Helvetica", 11)
+            )
+        self.friendrequests_header.pack()
+        self.friendrequestslist_header.pack(side=TOP, fill=X)
+        self.friendrequestslist_frame = Frame(self.main_list, bg="#e6e7f0")
+        self.friendrequestslist_frame.pack()
+        self.top_header = Frame(self.main_list, bg="#d7d8e0")
+        self.add_title = Label(
+            self.top_header,
+            text="Enter username:",
+            bg="#d7d8e0",
+            font=("Helvetica", 9)
+            )
+        self.add_title.pack(side=LEFT)
+        self.friend_input = Entry(self.top_header)
+        self.friend_input.pack(side=LEFT, fill=X, expand=TRUE)
+        self.add_button = Button(
+            self.top_header,
+            text="Add friend",
+            bg="#bfc0c7",
+            font=("Helvetica", 9),
+            command=check_friend
+            )
+        self.add_button.pack(side=RIGHT)
+        self.top_header.pack(side=BOTTOM, fill=X)
+        self.main_list.pack(fill=BOTH, expand=TRUE)
+        if not self.friend_info:
+            pass
+        else:
+            for friend in self.friend_info:
+                self.friends_list.insert(END, friend[0])
+        if not self.friendrequest_info:
+            pass
+        else:
+            for request in self.friendrequest_info:
+                inner_frame = Frame(self.friendrequestslist_frame, bg="#e6e7f0")
+                requesting_user = Label(
+                    inner_frame,
+                    text=f"{request[1]} {request[2]} ({request[0]}) has sent you a friend request.",
+                    bg="#e6e7f0",
+                    font=("Helvetica", 9)
+                    )
+                requesting_user.pack(side=LEFT)
+                accept_button = Button(
+                    inner_frame,
+                    text="Accept",
+                    font=("Helvetica", 9)
+                    )
+                accept_button.pack(side=LEFT)
+                deny_button = Button(
+                    inner_frame,
+                    text="Deny",
+                    font=("Helvetica", 9)
+                    )
+                deny_button.pack(side=LEFT)
+                accept_button.configure(command=lambda request=request, inner_frame=inner_frame, requesting_user=requesting_user, accept_button=accept_button, deny_button=deny_button: accept_request(request[0], inner_frame, requesting_user, accept_button, deny_button))
+                deny_button.configure(command=lambda request=request, inner_frame=inner_frame, requesting_user=requesting_user, accept_button=accept_button, deny_button=deny_button: forget_request(request[0], inner_frame, requesting_user, accept_button, deny_button))
+                inner_frame.pack(fill=BOTH, expand=TRUE)
     def fetchUserInfo(self, usernameLogin):
-        mycursor.execute("SELECT username, firstName, lastName, userRank, friendRequest, markingRequest, centre FROM user_account WHERE username=%s", (usernameLogin,))
-        userInfo = mycursor.fetchone()
-        return userInfo
+        mycursor.execute("SELECT username, firstName, lastName, friendRequest, markingRequest FROM user_account WHERE username=%s", (usernameLogin,))
+        return mycursor.fetchone()
+    def fetch_friendrequestinfo(self):
+        mycursor.execute("SELECT ua1.username, ua1.firstName, ua1.lastName FROM user_account ua1 INNER JOIN user_friendrequest ON user_friendrequest.accountID = ua1.accountID INNER JOIN user_account ua2 ON user_friendrequest.accountID2 = ua2.accountID WHERE ua2.username = %s", (usernameLogin,))
+        return mycursor.fetchall()
     def fetchDecks(self):
-        mycursor.execute("SELECT deckName, privacy FROM user_deck INNER JOIN user_account ON user_account.accountID = user_deck.accountID WHERE user_account.username = %s ORDER BY deckName ASC", (usernameLogin,))
-        userDecks = mycursor.fetchall()
-        return userDecks
-    def showDashboard(self, usernameLogin):
-        username1, firstName1, lastName1, userRank1, friendRequest1, markingRequest1, centre1 = self.fetchUserInfo(usernameLogin) #allowing users to edit decks/flashcards after creation may be a bit long, maybe something to improve in evaluation
+        mycursor.execute("SELECT deckName FROM user_deck INNER JOIN user_account ON user_account.accountID = user_deck.accountID WHERE user_account.username = %s ORDER BY deckName ASC", (usernameLogin,))
+        return mycursor.fetchall()
+    def showDashboard(self, usernameLogin): #show method used on each page to refresh info? update sql queries if doesn't work
         global deckList
-        decks = self.fetchDecks()
-        for widget in self.collection.winfo_children():
+        user_info = self.fetchUserInfo(usernameLogin)
+        friendsnumber = len(self.fetch_friendrequestinfo())
+        username = user_info[0]
+        firstname = user_info[1]
+        lastname = user_info[2]
+        self.fullname.set(f"{firstname} {lastname} ({username})")
+        if friendsnumber == 0:
+            self.friendsnumber.set("Friends")
+        else:
+            self.friendsnumber.set(f"Friends ({friendsnumber})")
+        for widget in self.collection.winfo_children(): #cant use pack_forget coz used befor its declared iguess??
             if not isinstance(widget, (Listbox, Scrollbar)):
                 continue
             widget.destroy()
-        scrollbar = Scrollbar(self.collection)
-        scrollbar.pack(side = RIGHT, fill=Y)
-        deckList = Listbox(self.collection, yscrollcommand=scrollbar.set, bg="#e6e7f0", font=("Helvetica", 12), relief=FLAT, selectmode=SINGLE, selectbackground="#bfc0c7")
+        decks = self.fetchDecks()
+        self.scrollbar = Scrollbar(self.collection)
+        self.scrollbar.pack(side=RIGHT, fill=Y)
+        deckList = Listbox(self.collection, yscrollcommand=self.scrollbar.set, bg="#e6e7f0", font=("Helvetica", 12), relief=FLAT, selectmode=SINGLE, selectbackground="#bfc0c7")
         for deck in decks:
             deckList.insert(END, deck[0])
         deckList.pack(fill=BOTH, expand=True)
         deckList.bind("<Double-1>", deckSelected)
-        scrollbar.config(command = deckList.yview)
-        page2.show()
+        self.scrollbar.config(command = deckList.yview)
+        page1.show()
 
-class profilePage(page):
+class inboxPage(page):
     def __init__(self, *args, **kwargs):
         page.__init__(self, *args, **kwargs)
-        self.profile=Frame(self)
-        self.profileHeader = StringVar()
-        self.profileTitle = Label(
-            self.profile,
-            textvariable=self.profileHeader,
-            anchor=CENTER,
-            bg="#aeafb5",
-            font=("Helvetica",11,"bold"),
-            relief=RIDGE
+        inboxNotification1 = Frame(self, bg="#d7d8e0")
+        inboxIcon1 = Label(
+            inboxNotification1,
+            bitmap="warning",
+            bg="#d7d8e0"
             )
-        self.profileTitle.pack(side=TOP, fill=X)
-        self.profile.pack(fill=BOTH, expand=True)
-    def fetchUserInfo(self, usernameLogin):
-        mycursor.execute("SELECT username, firstName, lastName, userRank, friendRequest, markingRequest, centre FROM user_account WHERE username=%s", (usernameLogin,))
-        userInfo = mycursor.fetchone()
-        return userInfo
+        inboxIcon1.pack(side=LEFT)
+        inboxName1 = Label(
+            inboxNotification1,
+            text="New marking request",
+            font=("Helvetica", 9, "bold"),
+            bg="#d7d8e0"
+            )
+        inboxName1.pack(side=LEFT)
+        inboxNotification1.pack(side=TOP, fill=X)
+        inboxContent1 = Frame(self, bg="#e6e7f0")
+        inboxContentname1 = Label(
+            inboxContent1,
+            textvariable=user1,
+            font=("Helvetica",8,"bold"),
+            bg="#e6e7f0"
+            )
+        inboxContentname1.pack(side=LEFT)
+        inboxContentinfo1 = Label(
+            inboxContent1,
+            text="sent you 5 marking requests.",
+            font=("Helvetica", 8),
+            bg="#e6e7f0"
+            )
+        inboxContentinfo1.pack(side=LEFT)
+        inboxContent1.pack(side=TOP, fill=X)
+        inboxButtons1 = Frame(self, bg="#e6e7f0")
+        inboxButtonview1 = Button(
+            inboxButtons1,
+            text="View flashcards",
+            font=("Helvetica", 7),
+            bg="#d7d8e0"
+            )
+        inboxButtonview1.pack(side=LEFT)
+        inboxButtonaccept1 = Button(
+            inboxButtons1,
+            text="Accept",
+            font=("Helvetica", 7),
+            bg="#d7d8e0"
+            )
+        inboxButtonaccept1.pack(side=LEFT)
+        inboxButtondeny1 = Button(
+            inboxButtons1,
+            text="Deny",
+            font=("Helvetica", 7),
+            bg="#d7d8e0"
+            )
+        inboxButtondeny1.pack(side=LEFT)
+        inboxDate1 = Label(
+            inboxButtons1,
+            text="36 minutes ago",
+            font=("Helvetica", 7),
+            bg="#e6e7f0"
+            )
+        inboxDate1.pack(side=LEFT)
+        inboxButtons1.pack(side=TOP, fill=X)
+        inboxMidfiller1 = Label(
+            self,
+            text=" ",
+            font=("Helvetica", 1),
+            bg="#aeafb5"
+            )
+        inboxMidfiller1.pack(side=TOP, fill=X)
+        inboxNotification2 = Frame(self, bg="#e6e7f0")
+        inboxName2 = Label(
+            inboxNotification2,
+            text="Marking feedback",
+            font=("Helvetica", 9),
+            bg="#e6e7f0"
+            )
+        inboxName2.pack(side=LEFT)
+        inboxNotification2.pack(side=TOP, fill=X)
+        inboxContent2 = Frame(self)
+        inboxContentname2 = Label(
+            inboxContent2,
+            textvariable=user2,
+            font=("Helvetica",8,"bold"),
+            )
+        inboxContentname2.pack(side=LEFT)
+        inboxContentinfo2 = Label(
+            inboxContent2,
+            text="has reviewed your 5 flashcard answers.",
+            font=("Helvetica", 8),
+            )
+        inboxContentinfo2.pack(side=LEFT)
+        inboxContent2.pack(side=TOP, fill=X)
+        inboxButtons2 = Frame(self)
+        inboxButtonview2 = Button(
+            inboxButtons2,
+            text="View feedback",
+            font=("Helvetica", 7),
+            bg="#e6e7f0"
+            )
+        inboxButtonview2.pack(side=LEFT)
+        inboxDate2 = Label(
+            inboxButtons2,
+            text="5 days ago",
+            font=("Helvetica", 7),
+            )
+        inboxDate2.pack(side=LEFT)
+        inboxButtons2.pack(side=TOP, fill=X)
+        inboxMidfiller2 = Label(
+            self,
+            text=" ",
+            font=("Helvetica", 1),
+            bg="#aeafb5"
+            )
+        inboxMidfiller2.pack(side=TOP, fill=X)
+        inboxNotification3 = Frame(self, bg="#e6e7f0")
+        inboxName3 = Label(
+            inboxNotification3,
+            text="Marking request denied",
+            font=("Helvetica", 9),
+            bg="#e6e7f0"
+            )
+        inboxName3.pack(side=LEFT)
+        inboxNotification3.pack(side=TOP, fill=X)
+        inboxContent3 = Frame(self)
+        inboxContentname3 = Label(
+            inboxContent3,
+            textvariable=user3,
+            font=("Helvetica",8,"bold"),
+            )
+        inboxContentname3.pack(side=LEFT)
+        inboxContentinfo3 = Label(
+            inboxContent3,
+            text="denied your 3 marking requests.",
+            font=("Helvetica", 8),
+            )
+        inboxContentinfo3.pack(side=LEFT)
+        inboxContent3.pack(side=TOP, fill=X)
+        inboxButtons3 = Frame(self)
+        inboxButtonview3 = Button(
+            inboxButtons3,
+            text="Send requests to another user",
+            font=("Helvetica", 7),
+            bg="#e6e7f0"
+            )
+        inboxButtonview3.pack(side=LEFT)
+        inboxDate3 = Label(
+            inboxButtons3,
+            text="24/10/23",
+            font=("Helvetica", 7),
+            )
+        inboxDate3.pack(side=LEFT)
+        inboxButtons3.pack(side=TOP, fill=X)
     def showDashboard(self, usernameLogin):
-        username1, firstName1, lastName1, userRank1, friendRequest1, markingRequest1, centre1 = self.fetchUserInfo(usernameLogin)
-        self.profileHeader.set(username1)
-        page3.show()
+        page2.show()
 
 class footer(Frame):
     def __init__(self, *args, **kwargs):
@@ -1292,45 +1351,35 @@ class footer(Frame):
         global page00
         global page1
         global page2
-        global page3
         page0 = loginPage(self)
         page00 = signupPage(self)
-        page1 = feedPage(self)
-        page2 = collectionPage(self)
-        page3 = profilePage(self)
+        page1 = collectionPage(self)
+        page2 = inboxPage(self)
 
         page0.grid(row=0, column=0, sticky="nsew")
         page00.grid(row=0, column=0, sticky="nsew")
         page1.grid(row=0, column=0, sticky="nsew")
         page2.grid(row=0, column=0, sticky="nsew")
-        page3.grid(row=0, column=0, sticky="nsew")
 
         self.rowconfigure(0, weight=1)
         self.columnconfigure(0, weight=1)
         page0.show()
     def showButtons(self):
         self.bottomButtons = Frame(self, bg="#d7d8e0") #bottom buttons
-        self.feedButton = Button(
-            self.bottomButtons,
-            text="Feed",
-            font=("Helvetica", 12),
-            command=lambda:page1.showDashboard(usernameLogin)
-            )
-        self.feedButton.pack(side=LEFT)
         self.collectionButton = Button(
             self.bottomButtons,
             text="Collection",
             font=("Helvetica", 12),
-            command=lambda:page2.showDashboard(usernameLogin)
+            command=lambda:page1.showDashboard(usernameLogin)
             )
         self.collectionButton.pack(side=LEFT)
-        self.profileButton = Button(
+        self.searchButton = Button(
             self.bottomButtons,
-            text="Profile",
+            text="Inbox (1)",
             font=("Helvetica", 12),
-            command=lambda:page3.showDashboard(usernameLogin)
+            command=lambda:page2.showDashboard(usernameLogin)
             )
-        self.profileButton.pack(side=LEFT)
+        self.searchButton.pack(side=LEFT)
         self.bottomButtons.grid(row=1, column=0, sticky="nsew")
 
 app = footer(window)
