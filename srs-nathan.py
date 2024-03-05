@@ -20,16 +20,15 @@ window['bg']="#e6e7f0"
 window.resizable(False, False)
 
 class Flashcard:
-    def __init__(self, id, question, answer, format, priority):
+    def __init__(self, id, question, answer, priority):
         self.id = id
         self.question = question
         self.answer = answer
-        self.format = format
         self.priority = priority
 
 class PeerFlashcard(Flashcard):
-    def __init__(self, id, question, answer, format, priority, input):
-        super().__init__(id, question, answer, format, priority)
+    def __init__(self, id, question, answer, priority, input):
+        super().__init__(id, question, answer, priority)
         self.input = input
 
 class CircularPriorityQueue:
@@ -587,103 +586,69 @@ class collectionPage(page):
         refresh_flashcards()
 
     def addFlashcards(self):
-        def checkFormat():
-            def add_flashcard():
-                if flashcard_format == "text": #add constraints eg length of question, answer... (probably increase length coz wtf)
-                    question = input_2.get("1.0", "end-1c")
-                    answer = input_3.get("1.0", "end-1c")
-                    mycursor.execute("SELECT * FROM user_flashcard INNER JOIN user_deck ON user_deck.deckID = user_flashcard.deckID INNER JOIN user_account ON user_account.accountID = user_deck.accountID WHERE user_flashcard.question = %s AND user_deck.deckName = %s AND user_account.username = %s", (question, selectedDeck, usernameLogin))
-                    if mycursor.fetchone():
-                        messagebox.showerror("Invalid Flashcard", "You already have a flashcard with this question in this deck.")
-                    else:
-                        mycursor.execute("INSERT INTO user_flashcard (deckID, question, answer, cardFormat) VALUES ((SELECT user_deck.deckID FROM user_deck INNER JOIN user_account ON user_account.accountID = user_deck.accountID WHERE user_deck.deckName = %s AND user_account.username = %s), %s, %s, %s)", (selectedDeck, usernameLogin, question, answer, flashcard_format))#replace subquery within subquery for INSERT or anything else with inner join
-                        mydb.commit()
-                        input_2.delete("1.0", "end")
-                        input_3.delete("1.0", "end")
-                        refresh_flashcards()
-            check_card_format = input_1.get()
-            title_1.pack_forget()
-            input_1.pack_forget()
-            button_1.pack_forget()
-            header_3.pack_forget()
-            if check_card_format == "Basic (Text only)":
-                flashcard_format = "text"
-                title_2 = Label(
-                    header_1,
-                    text="Question",
-                    font=("Helvetica", 11),
-                    bg="#d7d8e0"
-                    )
-                title_2.pack(side=LEFT)
-                input_2 = Text(header_2, width=30, height=4)
-                input_2.pack(side=LEFT)
-                header_4 = Frame(window_frame, bg="#d7d8e0")
-                title_3 = Label(
-                    header_4,
-                    text="Answer",
-                    font=("Helvetica", 11),
-                    bg="#d7d8e0"
-                    )
-                title_3.pack(side=LEFT)
-                header_4.pack(side=TOP, fill=X)
-                header_5 = Frame(window_frame, bg="#e6e7f0")
-                input_3 = Text(header_5, width=30, height=7)
-                input_3.pack(side=LEFT)
-                header_5.pack(side=TOP, fill=X)
-                header_6 = Frame(window_frame, bg="#e6e7f0")
-                button_2 = Button(
-                    header_6,
-                    text="Add",
-                    font=("Helvetica", 9),
-                    bg="#d7d8e0",
-                    command=add_flashcard
-                    )
-                button_2.pack(side=TOP, fill=X)
-                header_6.pack(side=TOP, fill=X)
-            elif check_card_format == "Media (Audio/images/video)": #dont forget to implement all of these
-                flashcard_format = "media"
-            elif check_card_format == "Multiple choice":
-                flashcard_format = "choice"
-            elif check_card_format == "Fill in the gaps":
-                flashcard_format = "gaps"
-            elif check_card_format == "Image occlusion":
-                flashcard_format = "occlusion"
-            elif check_card_format == "Mathematics":
-                flashcard_format = "maths"
+        def add_flashcard():
+            question = input_2.get("1.0", "end-1c") #add constraints eg length of question, answer... (probably increase length coz wtf)
+            answer = input_3.get("1.0", "end-1c")
+
+            mycursor.execute("SELECT * FROM user_flashcard INNER JOIN user_deck ON user_deck.deckID = user_flashcard.deckID INNER JOIN user_account ON user_account.accountID = user_deck.accountID WHERE user_flashcard.question = %s AND user_deck.deckName = %s AND user_account.username = %s", (question, selectedDeck, usernameLogin))
+            if mycursor.fetchone():
+                messagebox.showerror("Invalid Flashcard", "You already have a flashcard with this question in this deck.")
+            else:
+                mycursor.execute("INSERT INTO user_flashcard (deckID, question, answer) VALUES ((SELECT user_deck.deckID FROM user_deck INNER JOIN user_account ON user_account.accountID = user_deck.accountID WHERE user_deck.deckName = %s AND user_account.username = %s), %s, %s)", (selectedDeck, usernameLogin, question, answer))#replace subquery within subquery for INSERT or anything else with inner join
+                mydb.commit()
+                input_2.delete("1.0", "end")
+                input_3.delete("1.0", "end")
+                refresh_flashcards()
+
         global add_flashcard_page
+
         add_flashcard_page = Toplevel()
         add_flashcard_page.title(selectedDeck)
         add_flashcard_page.resizable(False, False)
+
         window_frame = Frame(add_flashcard_page, bg="#e6e7f0")
+
         header_1 = Frame(window_frame, bg="#d7d8e0")
-        title_1 = Label(
+        title_2 = Label(
             header_1,
-            text="Format",
+            text="Question",
             font=("Helvetica", 11),
             bg="#d7d8e0"
             )
-        title_1.pack(side=LEFT)
+        title_2.pack(side=LEFT)
         header_1.pack(side=TOP, fill=X)
+
         header_2 = Frame(window_frame, bg="#e6e7f0")
-        input_1 = ttk.Combobox(
-            header_2, 
-            state="readonly", 
-            values=["Basic (Text only)", "Media (Audio/images/video)", "Multiple choice", "Fill in the gaps", "Image occlusion", "Mathematics"],
-            width=25
-            )
-        input_1.set("Basic (Text only)")
-        input_1.pack(side=LEFT)
+        input_2 = Text(header_2, width=30, height=4)
+        input_2.pack(side=LEFT)
         header_2.pack(side=TOP, fill=X)
-        header_3 = Frame(window_frame, bg="#e6e7f0")
-        button_1 = Button(
+
+        header_3 = Frame(window_frame, bg="#d7d8e0")
+        title_3 = Label(
             header_3,
+            text="Answer",
+            font=("Helvetica", 11),
+            bg="#d7d8e0"
+            )
+        title_3.pack(side=LEFT)
+        header_3.pack(side=TOP, fill=X)
+
+        header_4 = Frame(window_frame, bg="#e6e7f0")
+        input_3 = Text(header_4, width=30, height=7)
+        input_3.pack(side=LEFT)
+        header_4.pack(side=TOP, fill=X)
+
+        header_5 = Frame(window_frame, bg="#e6e7f0")
+        button_2 = Button(
+            header_5,
             text="Add",
             font=("Helvetica", 9),
             bg="#d7d8e0",
-            command=checkFormat
+            command=add_flashcard
             )
-        button_1.pack(side=TOP, fill=X)
-        header_3.pack(side=TOP, fill=X)
+        button_2.pack(side=TOP, fill=X)
+        header_5.pack(side=TOP, fill=X)
+
         window_frame.pack(fill=BOTH, expand=True)
 
     def delete_deck(self, deckPage):
@@ -705,22 +670,22 @@ class collectionPage(page):
             pass
 
         def fetch_flashcards():
-            mycursor.execute("SELECT flashcardID, question, answer, cardFormat, priority FROM user_flashcard INNER JOIN user_deck ON user_deck.deckID = user_flashcard.deckID INNER JOIN user_account ON user_account.accountID = user_deck.accountID WHERE user_deck.deckName = %s AND user_account.username = %s", (selectedDeck, usernameLogin))
+            mycursor.execute("SELECT flashcardID, question, answer, priority FROM user_flashcard INNER JOIN user_deck ON user_deck.deckID = user_flashcard.deckID INNER JOIN user_account ON user_account.accountID = user_deck.accountID WHERE user_deck.deckName = %s AND user_account.username = %s", (selectedDeck, usernameLogin))
             flashcards = mycursor.fetchall()
             return flashcards
         
         def queue_flashcards(flashcards, flashcard_queue):
             for flashcard in flashcards:
-                flashcard = Flashcard(flashcard[0], flashcard[1], flashcard[2], flashcard[3], flashcard[4])#simpler way to do this using list comprehension?
+                flashcard = Flashcard(flashcard[0], flashcard[1], flashcard[2], flashcard[3])#simpler way to do this using list comprehension?
                 flashcard_queue.enQueue(flashcard)
 
-        def review_flashcards(): #indirect recursion? base case is when deQueue returns None (i.e. queue is empty) or number > 10 #review card based on card format
+        def review_flashcards(): #indirect recursion? base case is when deQueue returns None (i.e. queue is empty) or number > 10
             def answer_review(new_flashcard, question_header, input_text, flip_button, flashcards_reviewed, reviewed_list, peer_review_stack):
                 def update_priority(new_flashcard, new_priority, reviewed_list):
                     new_priority = max(0, min(10, new_priority))
                     mycursor.execute("UPDATE user_flashcard SET priority = %s WHERE flashcardID = %s", (new_priority, new_flashcard.id)) #make sure flashcards with lowest priority arent just left at the back forever - if all cards are the same priority, randomise?#also document all this
                     mydb.commit()
-                    reviewed_list.append([new_flashcard.id, new_flashcard.question, new_flashcard.answer, new_flashcard.format, new_priority]) #no option to edit DURING reviews
+                    reviewed_list.append([new_flashcard.id, new_flashcard.question, new_flashcard.answer, new_priority]) #no option to edit DURING reviews
 
                 def flashcard_rating1(new_flashcard, reviewed_list):
                     if isinstance(new_flashcard.priority, float):
@@ -766,10 +731,10 @@ class collectionPage(page):
                             messagebox.showerror("Unable to Peer Mark", "Friends are required for sending peer marking submissions.")
 
                 def peer_rating_push(new_flashcard, reviewed_list, peer_review_stack):
-                    peer_flashcard = PeerFlashcard(new_flashcard.id, new_flashcard.question, new_flashcard.answer, new_flashcard.format, new_flashcard.priority, user_input)
+                    peer_flashcard = PeerFlashcard(new_flashcard.id, new_flashcard.question, new_flashcard.answer, new_flashcard.priority, user_input)
                     peer_review_stack.push(peer_flashcard)
                     print(peer_review_stack.getStack())
-                    reviewed_list.append([new_flashcard.id, new_flashcard.question, new_flashcard.answer, new_flashcard.format, new_flashcard.priority])
+                    reviewed_list.append([new_flashcard.id, new_flashcard.question, new_flashcard.answer, new_flashcard.priority])
                     question_review(flashcards_reviewed, reviewed_list, peer_review_stack)
                     
                 user_input = input_text.get("1.0", "end-1c")
@@ -1663,4 +1628,4 @@ class footer(Frame):
 
 app = footer(window)
 app.pack(side=BOTTOM, fill=X)
-window.mainloop()#GET RID OF ALL NESTED FUNCTIONS and add .self to everything #add more aggregate sql functions and order by
+window.mainloop()#GET RID OF ALL NESTED FUNCTIONS and add .self to everything #add more aggregate sql functions and order by#add parent=self for messagebox
