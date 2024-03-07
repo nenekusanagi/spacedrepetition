@@ -8,7 +8,7 @@ mydb = mysql.connector.connect(host="localhost", user="sqluser", password="passw
 mycursor = mydb.cursor(buffered=True)
 
 window = Tk()
-window.title("Spaced Repetition Flashcard Software")
+window.title("Spaced Repetition Flashcards")
 window['bg']="#e6e7f0"
 window.resizable(False, False)
 
@@ -199,11 +199,31 @@ class page(Frame):
     def __init__(self, *args, **kwargs):
         Frame.__init__(self, *args, **kwargs)
 
+    def destroy_button(self, widget):
+        if isinstance(widget, Button):
+            widget.destroy()
+
+    def destroy_frame(self, widget):
+        if isinstance(widget, Frame):
+            widget.destroy()
+
+    def destroy_label(self, widget):
+        if isinstance(widget, Label):
+            widget.destroy()
+
+    def destroy_listbox(self, widget):
+        if isinstance(widget, Listbox):
+            widget.destroy()
+
+    def destroy_scrollbar(self, widget):
+        if isinstance(widget, Scrollbar):
+            widget.destroy()
+
     def show(self):
         self.lift()
 
     def show_dashboard(self):
-        pass
+        self.show()
         
 class loginPage(page):
     def __init__(self, *args, **kwargs):
@@ -211,7 +231,7 @@ class loginPage(page):
 
         self.login_page = Frame(self, bg="#e6e7f0")
 
-        self.front_title = Label(self.login_page, bg="#d7d8e0", font=("Helvetica", 15, "bold"), text="Spaced Repetition Flashcard Software")
+        self.front_title = Label(self.login_page, bg="#d7d8e0", font=("Helvetica", 15, "bold"), text="Spaced Repetition Flashcards")
         self.front_title.pack()
 
         self.username_label = Label(self.login_page, **login_label, text="Username")
@@ -239,7 +259,7 @@ class loginPage(page):
 
         mycursor.execute("SELECT * FROM user_account WHERE username = %s AND password = %s", (username_login, hashed_login))
         if mycursor.fetchone():
-            app.showButtons()
+            app.show_buttons()
             page1.show_dashboard() #use username coz its the only column that requires to be unique across all records
         else:
             messagebox.showerror("Invalid Login", "Username or password is incorrect.")
@@ -281,19 +301,9 @@ class signupPage(page):
         self.confirm_password_entry = Entry(self.signup_page, show="*")
         self.confirm_password_entry.pack()
 
-        self.signup_button = Button(
-            self.signup_page, 
-            text="Sign up", 
-            font=("Helvetica", 9),
-            command=self.signup
-            )
+        self.signup_button = Button(self.signup_page, font=("Helvetica", 9), text="Sign up", command=self.signup)
         self.signup_button.pack()
-        self.to_login_button = Button(
-            self.signup_page, 
-            text="Back", 
-            font=("Helvetica", 9),
-            command=self.show_loginPage
-            )
+        self.to_login_button = Button(self.signup_page, font=("Helvetica", 9), text="Back", command=self.show_loginPage)
         self.to_login_button.pack()
 
         self.signup_page.pack(**fill_widget)
@@ -633,9 +643,8 @@ class collectionPage(page):
                     refresh_flashcards()
                     
             for widget in self.flashcardlist_frame.winfo_children():
-                if not isinstance(widget, (Listbox, Scrollbar)):
-                    continue
-                widget.destroy()
+                self.destroy_listbox(widget)
+                self.destroy_scrollbar(widget)
                 
             flashcard_yscrollbar = Scrollbar(self.flashcardlist_frame)
             flashcard_yscrollbar.pack(**vertical_scrollbar)
@@ -861,13 +870,11 @@ class collectionPage(page):
                                     
                             if peer_counter < number_stacked:
                                 for widget in text_frame.winfo_children():
-                                    if not isinstance(widget, (Label, Scrollbar, Listbox)): #subroutine this
-                                        continue
-                                    widget.destroy()
+                                    self.destroy_label(widget)
+                                    self.destroy_listbox(widget)
+                                    self.destroy_scrollbar(widget)
                                 for widget in button_frame.winfo_children():
-                                    if not isinstance(widget, (Button)):
-                                        continue
-                                    widget.destroy()
+                                    self.destroy_button(widget)
 
                                 peer_flashcard = peer_review_stack.pop()
                                 peer_question = Label(text_frame, **supertitle_label, text=f"{peer_flashcard.question}", wraplength=500)
@@ -894,13 +901,12 @@ class collectionPage(page):
                                 send_button.pack(side=LEFT)
                             else:
                                 for widget in text_frame.winfo_children():
-                                    if not isinstance(widget, (Label, Scrollbar, Listbox)):
-                                        continue
-                                    widget.destroy()
+                                    self.destroy_label(widget)
+                                    self.destroy_listbox(widget)
+                                    self.destroy_scrollbar(widget)
                                 for widget in button_frame.winfo_children():
-                                    if not isinstance(widget, (Button)):
-                                        continue
-                                    widget.destroy()
+                                    self.destroy_button(widget)
+                                    
                                 review_show(review_flashcards_page, flashcard_counter, reviewed_list, text_frame, button_frame, flashcard_queue)
 
                         number_stacked = len(peer_review_stack.getStack())
@@ -911,13 +917,9 @@ class collectionPage(page):
                             review_show(review_flashcards_page, flashcard_counter, reviewed_list, text_frame, button_frame, flashcard_queue)
 
                     for widget in text_frame.winfo_children():
-                        if not isinstance(widget, (Label)):
-                            continue
-                        widget.destroy()
+                        self.destroy_label(widget)
                     for widget in button_frame.winfo_children():
-                        if not isinstance(widget, (Button)):
-                            continue
-                        widget.destroy()
+                        self.destroy_button(widget)
 
                     flashcard_counter += 1
                     if flashcard_counter > 10:
@@ -1057,10 +1059,9 @@ class collectionPage(page):
         else:
             self.friendsnumber.set(f"Friends ({friendsnumber})")
 
-        for widget in self.collection_page.winfo_children(): #destroy destroys all DESCENDENT WIDGETS - simplify
-            if not isinstance(widget, (Listbox, Scrollbar)):
-                continue
-            widget.destroy()
+        for widget in self.collection_page.winfo_children():
+            self.destroy_listbox(widget)
+            self.destroy_scrollbar(widget)
 
         decks = self.fetch_decks()
         self.scrollbar = Scrollbar(self.collection_page)
@@ -1091,7 +1092,7 @@ class inboxPage(page):
 
         self.feedback_header = Frame(self.inbox_page, bg="#d7d8e0")
         self.feedback_label = Label(self.feedback_header, **header_label, text="Peer Marking Feedback")
-        self.feedback_label.pack()
+        self.feedback_label.pack(side=LEFT)
         self.feedback_header.pack(**stretch_widget)
 
         self.peermarked_frame = Frame(self.inbox_page, bg="#e6e7f0")
@@ -1266,9 +1267,7 @@ class inboxPage(page):
         self.peermarked_info = self.fetch_peermarkedinfo()
 
         for widget in self.peermarking_frame.winfo_children():
-            if not isinstance(widget, (Frame)):
-                continue
-            widget.destroy()
+            self.destroy_frame(widget)
 
         if not self.peermarking_info:
             pass
@@ -1286,9 +1285,7 @@ class inboxPage(page):
                 mark_button.config(command=lambda marking_flashcard=marking_flashcard, marking_username=marking_username, marking_firstname=marking_firstname, marking_question=marking_question, inner_frame=inner_frame, marking_user=marking_user, mark_button=mark_button: self.mark_flashcard(marking_flashcard, marking_username, marking_firstname, marking_question, inner_frame, marking_user, mark_button))
 
         for widget in self.peermarked_frame.winfo_children():
-            if not isinstance(widget, (Frame)):
-                continue
-            widget.destroy()
+            self.destroy_frame(widget)
 
         if not self.peermarked_info:
             pass
@@ -1362,7 +1359,7 @@ class footer(Frame):
         else:
             self.inboxnumber.set(f"Inbox ({inboxnumber})")
 
-    def showButtons(self):
+    def show_buttons(self):
         self.set_inboxnumber()
 
         self.bottom_buttons = Frame(self, bg="#d7d8e0")
@@ -1375,4 +1372,4 @@ class footer(Frame):
 app = footer(window)
 app.pack(**footer_widget)
 
-window.mainloop()#add more aggregate sql functions and order by#add parent=self for messagebox
+window.mainloop()
