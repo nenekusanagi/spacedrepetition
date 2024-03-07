@@ -38,8 +38,8 @@ class CircularPriorityQueue:
         return (self.rear + 1) % self.maxsize == self.front
     
     def enQueue(self, flashcard):
-        if flashcard.priority == -1: #to allow unused cards to be placed randomly in queue
-            flashcard.priority = float(random.randint(0, 10)) #float data type to identify new flashcards so they can be prioritised according to their "new" status
+        if flashcard.priority == -1: #unused flashcards placed randomly in queue
+            flashcard.priority = float(random.randint(0, 10)) #priority casted to float to identify new flashcards so they can be prioritised according to their "new" status
             priority = flashcard.priority
         else:
             priority = flashcard.priority
@@ -199,6 +199,11 @@ class page(Frame):
     def __init__(self, *args, **kwargs):
         Frame.__init__(self, *args, **kwargs)
 
+    def upload_priority(self, flashcard_priority, flashcard):
+        flashcard_priority = max(0, min(10, flashcard_priority))
+        mycursor.execute("UPDATE user_flashcard SET priority = %s WHERE flashcardID = %s", (flashcard_priority, flashcard))
+        mydb.commit()
+
     def destroy_button(self, widget):
         if isinstance(widget, Button):
             widget.destroy()
@@ -257,10 +262,10 @@ class loginPage(page):
         password_login = self.password_entry.get()
         hashed_login = self.hashing_login(password_login)
 
-        mycursor.execute("SELECT * FROM user_account WHERE username = %s AND password = %s", (username_login, hashed_login))
+        mycursor.execute("SELECT * FROM user_account WHERE username = %s AND password = %s", (username_login, hashed_login)) #username used for sql queries, due to being the only column that requires to be unique across all records
         if mycursor.fetchone():
             app.show_buttons()
-            page1.show_dashboard() #use username coz its the only column that requires to be unique across all records
+            page1.show_dashboard()
         else:
             messagebox.showerror("Invalid Login", "Username or password is incorrect.")
 
@@ -426,6 +431,22 @@ class collectionPage(page):
                 mycursor.execute("UPDATE user_account SET markingrequest = 'off' WHERE username = %s", (username_login,))
                 mydb.commit()
 
+        def check_friendrequest():
+            mycursor.execute("SELECT friendrequest FROM user_account WHERE username = %s", (username_login,))
+            friend_result = mycursor.fetchone()
+            if friend_result[0] == "on":
+                self.friends_on_button.config(**button_on)
+            elif friend_result[0] == "off":
+                self.friends_off_button.config(**button_on)
+
+        def check_markingrequest():
+            mycursor.execute("SELECT markingrequest FROM user_account WHERE username = %s", (username_login,))
+            marking_result = mycursor.fetchone()
+            if marking_result[0] == "on":
+                self.marking_on_button.config(**button_on)
+            elif marking_result[0] == "off":
+                self.marking_off_button.config(**button_on)
+
         self.settingsPage = Toplevel()
         self.settingsPage.title("Settings")
         self.settingsPage.resizable(False, False)
@@ -444,12 +465,7 @@ class collectionPage(page):
         self.friends_off_button.pack(side=LEFT)
         self.friends_buttons.pack(**stretch_widget)
 
-        mycursor.execute("SELECT friendrequest FROM user_account WHERE username = %s", (username_login,))
-        friend_result = mycursor.fetchone()
-        if friend_result[0] == "on":
-            self.friends_on_button.config(**button_on)
-        elif friend_result[0] == "off":
-            self.friends_off_button.config(**button_on)
+        check_friendrequest()
 
         self.marking_section = Frame(self.settings_page, bg="#d7d8e0")
         self.marking_label = Label(self.marking_section, **option_label, text="Peer marking submissions")
@@ -463,12 +479,7 @@ class collectionPage(page):
         self.marking_off_button.pack(side=LEFT)
         self.marking_buttons.pack(**stretch_widget)
 
-        mycursor.execute("SELECT markingrequest FROM user_account WHERE username = %s", (username_login,))
-        marking_result = mycursor.fetchone()
-        if marking_result[0] == "on":
-            self.marking_on_button.config(**button_on)
-        elif marking_result[0] == "off":
-            self.marking_off_button.config(**button_on)
+        check_markingrequest()
 
         self.settings_page.pack(**fill_widget)
         
@@ -484,7 +495,7 @@ class collectionPage(page):
                     mycursor.execute("SELECT * FROM user_account WHERE username = %s", (friend_username,))
                     if mycursor.fetchone():
                         mycursor.execute("SELECT * FROM user_friend INNER JOIN user_account ua1 ON ua1.accountID = user_friend.accountID INNER JOIN user_account ua2 ON ua2.accountID = user_friend.accountID2 WHERE ua1.username = %s AND ua2.username = %s", (username_login, friend_username))
-                        if mycursor.fetchone(): #also for if you have already sent friend request, or the user has already sent friend request to you
+                        if mycursor.fetchone():
                             messagebox.showerror("Invalid Username", "You are already friends with this user.")
                         else:
                             mycursor.execute("SELECT * FROM user_friendrequest INNER JOIN user_account ua1 ON ua1.accountID = user_friendrequest.accountID INNER JOIN user_account ua2 ON ua2.accountID = user_friendrequest.accountID2 WHERE ua1.username = %s AND ua2.username = %s", (username_login, friend_username))
@@ -521,6 +532,24 @@ class collectionPage(page):
             mydb.commit()
             forget_request(request_username, inner_frame, requesting_user, accept_button, deny_button)
 
+        def load_friends():
+            for friend in self.friend_info:
+                self.friends_list.insert(END, friend[0])
+
+        def load_friendrequests():
+            for request in self.friendrequest_info:
+                inner_frame = Frame(self.friendrequests_frame, bg="#e6e7f0")
+                requesting_user = Label(inner_frame, **notification_label, text=f"{request[1]} {request[2]} ({request[0]}) has sent you a friend request.")
+                requesting_user.pack(side=LEFT)
+                accept_button = Button(inner_frame, font=("Helvetica", 9), text="Accept")
+                accept_button.pack(side=LEFT)
+                deny_button = Button(inner_frame, font=("Helvetica", 9), text="Deny")
+                deny_button.pack(side=LEFT)
+                inner_frame.pack(**fill_widget)
+
+                accept_button.config(command=lambda request=request, inner_frame=inner_frame, requesting_user=requesting_user, accept_button=accept_button, deny_button=deny_button: accept_request(request[0], inner_frame, requesting_user, accept_button, deny_button))
+                deny_button.config(command=lambda request=request, inner_frame=inner_frame, requesting_user=requesting_user, accept_button=accept_button, deny_button=deny_button: forget_request(request[0], inner_frame, requesting_user, accept_button, deny_button))
+
         self.friendsPage = Toplevel()
         self.friendsPage.title("Friends")
         self.friendsPage.resizable(False, False)
@@ -541,7 +570,7 @@ class collectionPage(page):
         self.friends_list = Listbox(self.friendslist_frame, **notification_label, yscrollcommand=self.friendslist_scrollbar.set, relief=FLAT, selectmode=SINGLE, selectbackground="#e6e7f0", selectforeground="#000000", activestyle="none")
         self.friends_list.pack(**fill_widget)
         self.friendslist_frame.pack(**fill_widget)
-        self.friendslist_scrollbar.config(command = self.friends_list.yview)
+        self.friendslist_scrollbar.config(command=self.friends_list.yview)
 
         self.friendrequests_header = Frame(self.friends_page, bg="#d7d8e0")
         self.friendrequests_label = Label(self.friendrequests_header, **option_label, text="Friend requests")
@@ -562,27 +591,8 @@ class collectionPage(page):
 
         self.friends_page.pack(**fill_widget)
 
-        if not self.friend_info:
-            pass
-        else:
-            for friend in self.friend_info:
-                self.friends_list.insert(END, friend[0])
-
-        if not self.friendrequest_info:
-            pass
-        else:
-            for request in self.friendrequest_info:
-                inner_frame = Frame(self.friendrequests_frame, bg="#e6e7f0")
-                requesting_user = Label(inner_frame, **notification_label, text=f"{request[1]} {request[2]} ({request[0]}) has sent you a friend request.")
-                requesting_user.pack(side=LEFT)
-                accept_button = Button(inner_frame, font=("Helvetica", 9), text="Accept")
-                accept_button.pack(side=LEFT)
-                deny_button = Button(inner_frame, font=("Helvetica", 9), text="Deny")
-                deny_button.pack(side=LEFT)
-                inner_frame.pack(**fill_widget)
-
-                accept_button.config(command=lambda request=request, inner_frame=inner_frame, requesting_user=requesting_user, accept_button=accept_button, deny_button=deny_button: accept_request(request[0], inner_frame, requesting_user, accept_button, deny_button))
-                deny_button.config(command=lambda request=request, inner_frame=inner_frame, requesting_user=requesting_user, accept_button=accept_button, deny_button=deny_button: forget_request(request[0], inner_frame, requesting_user, accept_button, deny_button))
+        load_friends()
+        load_friendrequests()
 
     def newdeck_window(self):
         def create_deck():
@@ -590,7 +600,7 @@ class collectionPage(page):
             if len(deck_name) > 50 or len(deck_name) < 1:
                 messagebox.showerror("Invalid Deck Name", "Deck name must be between 1 and 50 characters in length.")
             else:
-                mycursor.execute("SELECT * FROM user_deck INNER JOIN user_account ON user_account.accountID = user_deck.accountID WHERE user_deck.deckname = %s AND user_account.username = %s", (deck_name, username_login)) #case sensitive
+                mycursor.execute("SELECT * FROM user_deck INNER JOIN user_account ON user_account.accountID = user_deck.accountID WHERE user_deck.deckname = %s AND user_account.username = %s", (deck_name, username_login))
                 if mycursor.fetchone():
                     messagebox.showerror("Invalid Deck Name", "You already have a deck with this name.")
                 else:
@@ -622,6 +632,12 @@ class collectionPage(page):
 
     def deck_selected(self, event):
         def refresh_flashcards():
+            def load_flashcards(flashcard_info, flashcard_list):
+                for flashcard in flashcard_info:
+                    flashcard_list.insert(END, flashcard[1])
+                    flashcard_list.itemconfig(END, bg="#d7d8e0")
+                    flashcard_list.insert(END, flashcard[2])
+
             def delete_flashcard(flashcard_list):
                 selected_flashcard = "".join(flashcard_list.get(i) for i in flashcard_list.curselection())
                 message_answer = messagebox.askokcancel("Delete Flashcard", "Are you sure you want to delete this flashcard?")
@@ -646,20 +662,18 @@ class collectionPage(page):
                 self.destroy_listbox(widget)
                 self.destroy_scrollbar(widget)
                 
+            flashcard_info = self.fetch_flashcards()
             flashcard_yscrollbar = Scrollbar(self.flashcardlist_frame)
             flashcard_yscrollbar.pack(**vertical_scrollbar)
             flashcard_xscrollbar = Scrollbar(self.flashcardlist_frame)
             flashcard_xscrollbar.pack(**footer_widget)
             flashcard_list = Listbox(self.flashcardlist_frame, **notification_label, **select_list, yscrollcommand=flashcard_yscrollbar.set, xscrollcommand=flashcard_xscrollbar.set, width=50)
-            flashcards = self.fetch_flashcards()
-            for flashcard in flashcards:
-                flashcard_list.insert(END, flashcard[1])
-                flashcard_list.itemconfig(END, bg="#d7d8e0")
-                flashcard_list.insert(END, flashcard[2])
             flashcard_list.pack(**fill_widget)
             flashcard_list.bind("<Double-1>", lambda event:delete_flashcard(flashcard_list))
             flashcard_yscrollbar.config(command=flashcard_list.yview)
             flashcard_xscrollbar.config(command=flashcard_list.xview)
+
+            load_flashcards(flashcard_info, flashcard_list)
 
         def add_flashcards():
             def add_flashcard(question_entry, answer_entry):
@@ -676,7 +690,7 @@ class collectionPage(page):
                         if mycursor.fetchone():
                             messagebox.showerror("Invalid Flashcard", "You already have a flashcard with this question in this deck.")
                         else:
-                            mycursor.execute("INSERT INTO user_flashcard (deckID, question, answer) VALUES ((SELECT user_deck.deckID FROM user_deck INNER JOIN user_account ON user_account.accountID = user_deck.accountID WHERE user_deck.deckname = %s AND user_account.username = %s), %s, %s)", (selected_deck, username_login, question, answer))#replace subquery within subquery for INSERT or anything else with inner join
+                            mycursor.execute("INSERT INTO user_flashcard (deckID, question, answer) VALUES ((SELECT user_deck.deckID FROM user_deck INNER JOIN user_account ON user_account.accountID = user_deck.accountID WHERE user_deck.deckname = %s AND user_account.username = %s), %s, %s)", (selected_deck, username_login, question, answer))
                             mydb.commit()
                             question_entry.delete("1.0", "end")
                             answer_entry.delete("1.0", "end")
@@ -723,7 +737,7 @@ class collectionPage(page):
                         flashcard = Flashcard(flashcard[0], flashcard[1], flashcard[2], flashcard[3])
                         flashcard_queue.enQueue(flashcard)
                         
-                    priorities = {flashcard.priority for flashcard in flashcard_queue.queue if flashcard is not None}
+                    priorities = {flashcard.priority for flashcard in flashcard_queue.queue if flashcard is not None} #random shuffle if all priorities are same
                     if len(priorities) == 1:
                         random.shuffle(flashcard_queue.queue)
 
@@ -731,16 +745,14 @@ class collectionPage(page):
                     def check_input(review_flashcards_page, new_flashcard, question_header, input_text, flip_button, flashcard_counter, reviewed_list, peer_review_stack, text_frame, button_frame, flashcard_queue):
                         def answer_review(review_flashcards_page, new_flashcard, question_header, input_text, flip_button, flashcard_counter, reviewed_list, peer_review_stack, text_frame, button_frame, flashcard_queue, user_input):
                             def update_priority(new_flashcard, new_priority, reviewed_list):
-                                new_priority = max(0, min(10, new_priority))
-                                mycursor.execute("UPDATE user_flashcard SET priority = %s WHERE flashcardID = %s", (new_priority, new_flashcard.id))
-                                mydb.commit()
+                                self.upload_priority(new_priority, new_flashcard.id)
                                 reviewed_list.append([new_flashcard.id, new_flashcard.question, new_flashcard.answer, new_priority])
 
                             def flashcard_rating1(new_flashcard, reviewed_list):
                                 if isinstance(new_flashcard.priority, float):
                                     new_priority = 9
                                 else:
-                                    new_priority = new_flashcard.priority + 2 #low increment coz program assumes that you will do better on next review considering you've just looked at the flashcard.
+                                    new_priority = new_flashcard.priority + 2 #low increment, as program assumes that you will do better on next review considering you've just looked at the flashcard
                                 update_priority(new_flashcard, new_priority, reviewed_list)
 
                             def flashcard_rating2(new_flashcard, reviewed_list):
@@ -817,9 +829,19 @@ class collectionPage(page):
                     
                     def end_review(review_flashcards_page, peer_review_stack, flashcard_counter, reviewed_list, text_frame, button_frame, flashcard_queue):
                         def review_show(review_flashcards_page, flashcard_counter, reviewed_list, text_frame, button_frame, flashcard_queue):
+                            def calculate_score(result, flashcards_number, flashcards_sum):
+                                for i in range (0, flashcards_number):
+                                    if result[i][0] == -1:
+                                        flashcards_sum += 7 #weighed priority for non-used cards
+                                    else:
+                                        flashcards_sum += result[i][0]
+
+                                score = round((10 - (flashcards_sum / flashcards_number)) * 10, 1) 
+                                return max(0.0, min(100.0, score))
+                            
                             def review_again(review_flashcards_page, flashcard_counter, reviewed_list, text_frame, button_frame, flashcard_queue):
                                 peer_review_stack = Stack(deck_size)
-                                for i in range(0, len(reviewed_list)): #list used (instead of stack/queue bc...) (this list basically functions as a queue anyway, but the order isn't relevant because it'll be arranged by priority by cpq)
+                                for i in range(0, len(reviewed_list)): #list basically functions as a queue, but the order isn't relevant because it'll be arranged by priority in cpq
                                     again_flashcard = Flashcard(reviewed_list[i][0], reviewed_list[i][1], reviewed_list[i][2], reviewed_list[i][3])
                                     flashcard_queue.enQueue(again_flashcard) #utilises circular queue's wrapping around properties
 
@@ -829,21 +851,14 @@ class collectionPage(page):
 
                             def finish_review(review_flashcards_page):
                                 review_flashcards_page.destroy()
-                                self.deck_list.bind("<Double-1>", self.deck_selected)
+                                self.rebind_listbox()
 
                             mycursor.execute("SELECT priority FROM user_flashcard INNER JOIN user_deck ON user_deck.deckID = user_flashcard.deckID INNER JOIN user_account ON user_account.accountID = user_deck.accountID WHERE user_deck.deckname = %s AND user_account.username = %s", (selected_deck, username_login))
                             result = mycursor.fetchall()
                             flashcards_number = len(result)
                             flashcards_sum = 0
-
-                            for i in range (0, flashcards_number):
-                                if result[i][0] == -1:
-                                    flashcards_sum += 7 #weighed priority for non-used cards
-                                else:
-                                    flashcards_sum += result[i][0]
-
-                            score = round((10 - (flashcards_sum / flashcards_number)) * 10, 1) 
-                            score = max(0.0, min(100.0, score))
+                            score = calculate_score(result, flashcards_number, flashcards_sum)
+                            
                             mycursor.execute("UPDATE user_deck INNER JOIN user_account ON user_account.accountID = user_deck.accountID SET user_deck.score = %s WHERE user_deck.deckname = %s AND user_account.username = %s", (score, selected_deck, username_login))
                             mydb.commit()
                             
@@ -857,6 +872,10 @@ class collectionPage(page):
                             finish_button.pack(side=LEFT)
 
                         def peer_review(review_flashcards_page, peer_counter, number_stacked, peer_review_stack, flashcard_counter, reviewed_list, text_frame, button_frame, flashcard_queue):
+                            def load_peers(peers_info, peers_list):
+                                for peer in peers_info:
+                                    peers_list.insert(END, peer[0])
+
                             def check_peer(review_flashcards_page, peer_flashcard, peer_counter, number_stacked, flashcard_counter, reviewed_list, peer_review_stack, text_frame, button_frame, flashcard_queue):
                                 selected_peer = "".join(peers_list.get(i) for i in peers_list.curselection())
                                 if selected_peer:
@@ -888,14 +907,13 @@ class collectionPage(page):
                                 peer_subheader = Label(text_frame, **notification_label, text="Select a friend to send your answer to:")
                                 peer_subheader.pack()
 
-                                peers = self.fetchmarkingfriend_info()
+                                peers_info = self.fetch_markingfriendinfo()
                                 friend_scrollbar = Scrollbar(text_frame)
                                 friend_scrollbar.pack(**vertical_scrollbar)
                                 peers_list = Listbox(text_frame, **notification_label, **select_list, yscrollcommand=friend_scrollbar.set)
-                                for peer in peers:
-                                    peers_list.insert(END, peer[0])
                                 peers_list.pack(**fill_widget)
                                 friend_scrollbar.config(command=peers_list.yview)
+                                load_peers(peers_info, peers_list)
 
                                 send_button = Button(button_frame, **top_button, text="Send", command=lambda:check_peer(review_flashcards_page, peer_flashcard, peer_counter, number_stacked, flashcard_counter, reviewed_list, peer_review_stack, text_frame, button_frame, flashcard_queue))
                                 send_button.pack(side=LEFT)
@@ -937,12 +955,12 @@ class collectionPage(page):
                             flip_button = Button(button_frame, **top_button, text="Flip", command=lambda:check_input(review_flashcards_page, new_flashcard, question_header, input_text, flip_button, flashcard_counter, reviewed_list, peer_review_stack, text_frame, button_frame, flashcard_queue))
                             flip_button.pack(**stretch_widget)
                 
-                self.deck_list.unbind("<Double-1>") #cannot open window while reviewing in case the user deletes deck -> causes sql error
+                self.deck_list.unbind("<Double-1>") #cannot open window while reviewing in case the user deletes deck and causes sql error
 
                 review_flashcards_page = Toplevel()
                 review_flashcards_page.title(selected_deck)
-                review_flashcards_page.resizable(False, False) #all flashcards put into queue, and organised depending on priority thanks to enQueue(). flashcard reviews are 10 at a time, and are dequeued one by one to get the next flashcard
-                review_flashcards_page.protocol("WM_DELETE_WINDOW", self.do_pass)
+                review_flashcards_page.resizable(False, False) #all flashcards put into queue, and organised according to priority thanks to enQueue(). flashcards are dequeued one by one to get the next one
+                review_flashcards_page.protocol("WM_DELETE_WINDOW", lambda:[review_flashcards_page.destroy(), self.rebind_listbox()])
 
                 flashcards = self.fetch_flashcards()
                 deck_size = len(flashcards)
@@ -984,8 +1002,6 @@ class collectionPage(page):
                 mydb.commit()
                 self.deckPage.destroy()
                 page1.show_dashboard() #refresh
-            else:
-                pass
             
         global selected_deck
         selected_deck = "".join(self.deck_list.get(i) for i in self.deck_list.curselection())
@@ -994,7 +1010,7 @@ class collectionPage(page):
         self.deckPage.title(selected_deck)
         self.deckPage.resizable(False, False)
 
-        mycursor.execute("SELECT score FROM user_deck INNER JOIN user_account ON user_account.accountID = user_deck.accountID WHERE user_deck.deckname = %s AND user_account.username = %s", (selected_deck, username_login)) #make sure all sql string input are unique, as to not accidentally fetch someone else's deck
+        mycursor.execute("SELECT score FROM user_deck INNER JOIN user_account ON user_account.accountID = user_deck.accountID WHERE user_deck.deckname = %s AND user_account.username = %s", (selected_deck, username_login))
         deck_results = mycursor.fetchone()
         
         self.deck_page = Frame(self.deckPage, bg="#e6e7f0")
@@ -1022,8 +1038,12 @@ class collectionPage(page):
 
         refresh_flashcards()
 
-    def do_pass(self): #so that listbox is binded when "finish" button is pressed ?????????
-        pass
+    def rebind_listbox(self):
+        self.deck_list.bind("<Double-1>", self.deck_selected)
+
+    def load_decks(self):
+        for deck in self.deck_info:
+            self.deck_list.insert(END, deck[0])
 
     def fetch_account(self):
         mycursor.execute("SELECT username, firstname, lastname, friendrequest, markingrequest FROM user_account WHERE username=%s", (username_login,))
@@ -1041,7 +1061,7 @@ class collectionPage(page):
         mycursor.execute("SELECT ua2.username FROM user_account ua1 INNER JOIN user_friend ON user_friend.accountID = ua1.accountID INNER JOIN user_account ua2 ON ua2.accountID = user_friend.accountID2 WHERE ua1.username = %s", (username_login,))
         return mycursor.fetchall()
     
-    def fetchmarkingfriend_info(self):
+    def fetch_markingfriendinfo(self):
         mycursor.execute("SELECT ua2.username FROM user_account ua1 INNER JOIN user_friend ON user_friend.accountID = ua1.accountID INNER JOIN user_account ua2 ON ua2.accountID = user_friend.accountID2 WHERE ua1.username = %s AND ua2.markingrequest = 'on'", (username_login,))
         return mycursor.fetchall()
     
@@ -1063,15 +1083,14 @@ class collectionPage(page):
             self.destroy_listbox(widget)
             self.destroy_scrollbar(widget)
 
-        decks = self.fetch_decks()
+        self.deck_info = self.fetch_decks()
         self.scrollbar = Scrollbar(self.collection_page)
         self.scrollbar.pack(side=RIGHT, fill=Y)
         self.deck_list = Listbox(self.collection_page, yscrollcommand=self.scrollbar.set, bg="#e6e7f0", font=("Helvetica", 12), relief=FLAT, selectmode=SINGLE, selectbackground="#bfc0c7")
-        for deck in decks:
-            self.deck_list.insert(END, deck[0])
         self.deck_list.pack(**fill_widget)
         self.deck_list.bind("<Double-1>", self.deck_selected)
         self.scrollbar.config(command=self.deck_list.yview)
+        self.load_decks()
 
         app.set_inboxnumber()
         page1.show()
@@ -1143,7 +1162,7 @@ class inboxPage(page):
                     flashcard_newpriority = 9
                 else:
                     flashcard_newpriority = flashcard_priority + 2
-                update_priority(flashcard_newpriority, marking_flashcard)
+                self.upload_priority(flashcard_newpriority, marking_flashcard)
                 send_feedback(peer_rating, marking_username, marking_flashcard, flashcard_useranswer, inner_frame, marking_user, mark_button, peer_feedback)
 
             elif self.rating2_button.cget("bg") == "#ffffff":
@@ -1152,7 +1171,7 @@ class inboxPage(page):
                     flashcard_newpriority = 7
                 else:
                     flashcard_newpriority = flashcard_priority + 1
-                update_priority(flashcard_newpriority, marking_flashcard)
+                self.upload_priority(flashcard_newpriority, marking_flashcard)
                 send_feedback(peer_rating, marking_username, marking_flashcard, flashcard_useranswer, inner_frame, marking_user, mark_button, peer_feedback)
 
             elif self.rating3_button.cget("bg") == "#ffffff":
@@ -1161,7 +1180,7 @@ class inboxPage(page):
                     flashcard_newpriority = 5
                 else:
                     flashcard_newpriority = flashcard_priority - 1
-                update_priority(flashcard_newpriority, marking_flashcard)
+                self.upload_priority(flashcard_newpriority, marking_flashcard)
                 send_feedback(peer_rating, marking_username, marking_flashcard, flashcard_useranswer, inner_frame, marking_user, mark_button, peer_feedback)
 
             elif self.rating4_button.cget("bg") == "#ffffff":
@@ -1170,16 +1189,11 @@ class inboxPage(page):
                     flashcard_newpriority = 3
                 else:
                     flashcard_newpriority = flashcard_priority - 2
-                update_priority(flashcard_newpriority, marking_flashcard)
+                self.upload_priority(flashcard_newpriority, marking_flashcard)
                 send_feedback(peer_rating, marking_username, marking_flashcard, flashcard_useranswer, inner_frame, marking_user, mark_button, peer_feedback)
 
             else:
                 messagebox.showerror("Invalid Marking", "A rating has not been selected.")
-
-        def update_priority(flashcard_newpriority, marking_flashcard):
-            flashcard_newpriority = max(0, min(10, flashcard_newpriority))
-            mycursor.execute("UPDATE user_flashcard SET priority = %s WHERE flashcardID = %s", (flashcard_newpriority, marking_flashcard))
-            mydb.commit()
 
         def send_feedback(peer_rating, marking_username, marking_flashcard, flashcard_useranswer, inner_frame, marking_user, mark_button, peer_feedback):
             mycursor.execute("INSERT INTO user_peermarked (accountID, flashcardID, accountID2, useranswer, rating, feedback) VALUES ((SELECT user_account.accountID FROM user_account WHERE user_account.username = %s), %s, (SELECT user_account.accountID FROM user_account WHERE user_account.username = %s), %s, %s, %s)", (username_login, marking_flashcard, marking_username, flashcard_useranswer, peer_rating, peer_feedback))
@@ -1242,13 +1256,48 @@ class inboxPage(page):
         
         if inner_frame4:
             inner_frame4.pack_forget()
-        else:
-            pass
-
         if marked_user3:
             marked_user3.pack_forget()
-        else:
-            pass
+
+    def load_submissions(self):
+        for peermarking in self.peermarking_info:
+            marking_flashcard, marking_username, marking_firstname, marking_lastname, marking_question = peermarking
+
+            inner_frame = Frame(self.peermarking_frame, bg="#e6e7f0")
+            marking_user = Label(inner_frame, **notification_label, text=f"{marking_firstname} {marking_lastname} ({marking_username}) has sent you a peer marking submission: '{marking_question}'.", wraplength=700)
+            marking_user.pack(side=LEFT)
+            mark_button = Button(inner_frame, font=("Helvetica", 9), text="Mark")
+            mark_button.pack(side=LEFT)
+            inner_frame.pack(**fill_widget)
+
+            mark_button.config(command=lambda marking_flashcard=marking_flashcard, marking_username=marking_username, marking_firstname=marking_firstname, marking_question=marking_question, inner_frame=inner_frame, marking_user=marking_user, mark_button=mark_button: self.mark_flashcard(marking_flashcard, marking_username, marking_firstname, marking_question, inner_frame, marking_user, mark_button))
+
+    def load_feedback(self):
+        for peermarked in self.peermarked_info:
+            marked_flashcard, marked_useranswer, marked_rating, marked_feedback, marked_username, marked_firstname, marked_lastname, marked_question = peermarked
+
+            inner_frame2 = Frame(self.peermarked_frame, bg="#e6e7f0")
+            marked_user = Label(inner_frame2, **notification_label, text=f"{marked_firstname} {marked_lastname} ({marked_username}) marked your flashcard '{marked_question}' with a {marked_rating.capitalize()} rating.", wraplength=700)
+            marked_user.pack(side=LEFT)
+            marked_button = Button(inner_frame2, font=("Helvetica", 9), text="Done")
+            marked_button.pack(side=LEFT)
+            inner_frame2.pack(**fill_widget)
+
+            inner_frame3 = Frame(self.peermarked_frame, bg="#e6e7f0")
+            marked_user2 = Label(inner_frame3, **notification_label, text=f"'{marked_useranswer}'", wraplength=700)
+            marked_user2.pack(side=LEFT)
+            inner_frame3.pack(**fill_widget)
+
+            inner_frame4 = None
+            marked_user3 = None
+
+            if marked_feedback:
+                inner_frame4 = Frame(self.peermarked_frame, bg="#e6e7f0")
+                marked_user3 = Label(inner_frame4, **notification_label, text=f"Feedback: '{marked_feedback}'", wraplength=700)
+                marked_user3.pack(side=LEFT)
+                inner_frame4.pack(**fill_widget)
+
+            marked_button.config(command=lambda marked_flashcard=marked_flashcard, marked_username=marked_username, inner_frame2=inner_frame2, marked_user=marked_user, marked_button=marked_button, inner_frame3=inner_frame3, marked_user2=marked_user2, inner_frame4=inner_frame4, marked_user3 = marked_user3: self.finish_peer(marked_flashcard, marked_username, inner_frame2, marked_user, marked_button, inner_frame3, marked_user2, inner_frame4, marked_user3))
 
     def fetch_peermarkinginfo(self):
         mycursor.execute("SELECT user_peermarking.flashcardID, ua2.username, ua2.firstname, ua2.lastname, user_flashcard.question FROM user_peermarking INNER JOIN user_account ua2 ON ua2.accountID = user_peermarking.accountID INNER JOIN user_account ua1 ON ua1.accountID = user_peermarking.accountID2 INNER JOIN user_flashcard ON user_flashcard.flashcardID = user_peermarking.flashcardID WHERE ua1.username = %s ORDER BY user_peermarking.accountID ASC", (username_login,))
@@ -1269,54 +1318,12 @@ class inboxPage(page):
         for widget in self.peermarking_frame.winfo_children():
             self.destroy_frame(widget)
 
-        if not self.peermarking_info:
-            pass
-        else:
-            for peermarking in self.peermarking_info:
-                marking_flashcard, marking_username, marking_firstname, marking_lastname, marking_question = peermarking
-
-                inner_frame = Frame(self.peermarking_frame, bg="#e6e7f0")
-                marking_user = Label(inner_frame, **notification_label, text=f"{marking_firstname} {marking_lastname} ({marking_username}) has sent you a peer marking submission: '{marking_question}'.", wraplength=700)
-                marking_user.pack(side=LEFT)
-                mark_button = Button(inner_frame, font=("Helvetica", 9), text="Mark")
-                mark_button.pack(side=LEFT)
-                inner_frame.pack(**fill_widget)
-
-                mark_button.config(command=lambda marking_flashcard=marking_flashcard, marking_username=marking_username, marking_firstname=marking_firstname, marking_question=marking_question, inner_frame=inner_frame, marking_user=marking_user, mark_button=mark_button: self.mark_flashcard(marking_flashcard, marking_username, marking_firstname, marking_question, inner_frame, marking_user, mark_button))
+        self.load_submissions()
 
         for widget in self.peermarked_frame.winfo_children():
             self.destroy_frame(widget)
 
-        if not self.peermarked_info:
-            pass
-        else:
-            for peermarked in self.peermarked_info:
-                marked_flashcard, marked_useranswer, marked_rating, marked_feedback, marked_username, marked_firstname, marked_lastname, marked_question = peermarked
-
-                inner_frame2 = Frame(self.peermarked_frame, bg="#e6e7f0")
-                marked_user = Label(inner_frame2, **notification_label, text=f"{marked_firstname} {marked_lastname} ({marked_username}) marked your flashcard '{marked_question}' with a {marked_rating.capitalize()} rating.", wraplength=700)
-                marked_user.pack(side=LEFT)
-                marked_button = Button(inner_frame2, font=("Helvetica", 9), text="Done")
-                marked_button.pack(side=LEFT)
-                inner_frame2.pack(**fill_widget)
-
-                inner_frame3 = Frame(self.peermarked_frame, bg="#e6e7f0")
-                marked_user2 = Label(inner_frame3, **notification_label, text=f"'{marked_useranswer}'", wraplength=700)
-                marked_user2.pack(side=LEFT)
-                inner_frame3.pack(**fill_widget)
-
-                inner_frame4 = None
-                marked_user3 = None
-
-                if marked_feedback:
-                    inner_frame4 = Frame(self.peermarked_frame, bg="#e6e7f0")
-                    marked_user3 = Label(inner_frame4, **notification_label, text=f"Feedback: '{marked_feedback}'", wraplength=700)
-                    marked_user3.pack(side=LEFT)
-                    inner_frame4.pack(**fill_widget)
-                else:
-                    pass
-
-                marked_button.config(command=lambda marked_flashcard=marked_flashcard, marked_username=marked_username, inner_frame2=inner_frame2, marked_user=marked_user, marked_button=marked_button, inner_frame3=inner_frame3, marked_user2=marked_user2, inner_frame4=inner_frame4, marked_user3 = marked_user3: self.finish_peer(marked_flashcard, marked_username, inner_frame2, marked_user, marked_button, inner_frame3, marked_user2, inner_frame4, marked_user3))
+        self.load_feedback()
 
         app.set_inboxnumber()
         page2.show()
