@@ -10,8 +10,6 @@ Friends can be added by inputting their username into a "friends list" window. A
 
 Decks can be created, from which flashcards can be created and added within them.
 
-There are a number of different flashcard formats (basic [text only], maths, image occlusion, fill in the gaps...).
-
 Decks can be reviewed, from which 10 flashcards will be chosen based on the level of their priority (or randomly if the deck has never been reviewed before).
 
 For each flashcard, you will view the question and input your answer to the question.
