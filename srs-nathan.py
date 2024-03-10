@@ -87,7 +87,7 @@ class CircularPriorityQueue:
             return item
         
     def getQueue(self):
-        return list((flashcard.id, flashcard.priority) for flashcard in self.queue if flashcard is not None)
+        return [(flashcard.id, flashcard.priority) for flashcard in self.queue if flashcard is not None]
     
 class Stack:
     def __init__(self, size):
@@ -117,7 +117,7 @@ class Stack:
             return flashcard
         
     def getStack(self):
-        return list((flashcard.id, flashcard.question, flashcard.input) for flashcard in self.stack if flashcard is not None)
+        return [(flashcard.id, flashcard.question, flashcard.input) for flashcard in self.stack if flashcard is not None]
 
 fill_widget = {
     "fill": BOTH,
@@ -737,7 +737,7 @@ class collectionPage(page):
                         flashcard = Flashcard(flashcard[0], flashcard[1], flashcard[2], flashcard[3])
                         flashcard_queue.enQueue(flashcard)
                         
-                    priorities = {flashcard.priority for flashcard in flashcard_queue.queue if flashcard is not None} #random shuffle if all priorities are same
+                    priorities = {flashcard.priority for flashcard in flashcard_queue.queue if flashcard} #random shuffle if all priorities are same
                     if len(priorities) == 1:
                         random.shuffle(flashcard_queue.queue)
 
@@ -780,7 +780,6 @@ class collectionPage(page):
                                 def peer_rating_push(review_flashcards_page, new_flashcard, reviewed_list, peer_review_stack, text_frame, button_frame, flashcard_queue):
                                     peer_flashcard = PeerFlashcard(new_flashcard.id, new_flashcard.question, new_flashcard.answer, new_flashcard.priority, user_input)
                                     peer_review_stack.push(peer_flashcard)
-                                    print(peer_review_stack.getStack())
                                     reviewed_list.append([new_flashcard.id, new_flashcard.question, new_flashcard.answer, new_flashcard.priority])
                                     question_review(review_flashcards_page, flashcard_counter, reviewed_list, peer_review_stack, text_frame, button_frame, flashcard_queue)
 
@@ -871,23 +870,24 @@ class collectionPage(page):
                             finish_button = Button(button_frame, **top_button, text="Finish", command=lambda:finish_review(review_flashcards_page))
                             finish_button.pack(side=LEFT)
 
-                        def peer_review(review_flashcards_page, peer_counter, number_stacked, peer_review_stack, flashcard_counter, reviewed_list, text_frame, button_frame, flashcard_queue):
+                        def peer_review(review_flashcards_page, peer_counter, peer_review_stack, flashcard_counter, reviewed_list, text_frame, button_frame, flashcard_queue):
                             def load_peers(peers_info, peers_list):
                                 for peer in peers_info:
                                     peers_list.insert(END, peer[0])
 
-                            def check_peer(review_flashcards_page, peer_flashcard, peer_counter, number_stacked, flashcard_counter, reviewed_list, peer_review_stack, text_frame, button_frame, flashcard_queue):
+                            def check_peer(review_flashcards_page, peer_flashcard, peer_counter, flashcard_counter, reviewed_list, peer_review_stack, text_frame, button_frame, flashcard_queue):
                                 selected_peer = "".join(peers_list.get(i) for i in peers_list.curselection())
                                 if selected_peer:
                                     mycursor.execute("INSERT INTO user_peermarking (accountID, flashcardID, accountID2, useranswer) VALUES ((SELECT user_account.accountID FROM user_account WHERE user_account.username = %s), %s, (SELECT user_account.accountID FROM user_account WHERE user_account.username = %s), %s)", (username_login, peer_flashcard.id, selected_peer, peer_flashcard.input))
                                     mydb.commit()
                                     messagebox.showinfo("Marking Request Sent", f"Your marking request to {selected_peer} has been sent and is now pending a response.")
                                     peer_counter += 1
-                                    peer_review(review_flashcards_page, peer_counter, number_stacked, peer_review_stack, flashcard_counter, reviewed_list, text_frame, button_frame, flashcard_queue)
+                                    peer_review(review_flashcards_page, peer_counter,  peer_review_stack, flashcard_counter, reviewed_list, text_frame, button_frame, flashcard_queue)
                                 else:
                                     messagebox.showerror("Invalid Friend", "No friend has been selected.")
                                     
-                            if peer_counter < number_stacked:
+                            peer_flashcard = peer_review_stack.pop()
+                            if peer_flashcard:
                                 for widget in text_frame.winfo_children():
                                     self.destroy_label(widget)
                                     self.destroy_listbox(widget)
@@ -895,7 +895,6 @@ class collectionPage(page):
                                 for widget in button_frame.winfo_children():
                                     self.destroy_button(widget)
 
-                                peer_flashcard = peer_review_stack.pop()
                                 peer_question = Label(text_frame, **supertitle_label, text=f"{peer_flashcard.question}", wraplength=500)
                                 peer_question.pack()
                                 peer_answer = Label(text_frame, **login_label, text=f"{peer_flashcard.answer}", wraplength=500)
@@ -915,7 +914,7 @@ class collectionPage(page):
                                 friend_scrollbar.config(command=peers_list.yview)
                                 load_peers(peers_info, peers_list)
 
-                                send_button = Button(button_frame, **top_button, text="Send", command=lambda:check_peer(review_flashcards_page, peer_flashcard, peer_counter, number_stacked, flashcard_counter, reviewed_list, peer_review_stack, text_frame, button_frame, flashcard_queue))
+                                send_button = Button(button_frame, **top_button, text="Send", command=lambda:check_peer(review_flashcards_page, peer_flashcard, peer_counter, flashcard_counter, reviewed_list, peer_review_stack, text_frame, button_frame, flashcard_queue))
                                 send_button.pack(side=LEFT)
                             else:
                                 for widget in text_frame.winfo_children():
@@ -927,10 +926,9 @@ class collectionPage(page):
                                     
                                 review_show(review_flashcards_page, flashcard_counter, reviewed_list, text_frame, button_frame, flashcard_queue)
 
-                        number_stacked = len(peer_review_stack.getStack())
-                        if number_stacked > 0:
+                        if not peer_review_stack.isEmpty():
                             peer_counter = 0
-                            peer_review(review_flashcards_page, peer_counter, number_stacked, peer_review_stack, flashcard_counter, reviewed_list, text_frame, button_frame, flashcard_queue)
+                            peer_review(review_flashcards_page, peer_counter, peer_review_stack, flashcard_counter, reviewed_list, text_frame, button_frame, flashcard_queue)
                         else:
                             review_show(review_flashcards_page, flashcard_counter, reviewed_list, text_frame, button_frame, flashcard_queue)
 
@@ -947,7 +945,6 @@ class collectionPage(page):
                         if new_flashcard is None:
                             end_review(review_flashcards_page, peer_review_stack, flashcard_counter, reviewed_list, text_frame, button_frame, flashcard_queue)
                         else:
-                            print(flashcard_queue.getQueue())
                             question_header = Label(text_frame, **title_label, text=f"{new_flashcard.question}", wraplength=500)
                             question_header.pack()
                             input_text = Text(text_frame, width=50, height=9)
