@@ -937,6 +937,7 @@ class collectionPage(page):
                     for widget in button_frame.winfo_children():
                         self.destroy_button(widget)
 
+                    print(flashcard_queue.getQueue())
                     flashcard_counter += 1
                     if flashcard_counter > 10:
                         end_review(review_flashcards_page, peer_review_stack, flashcard_counter, reviewed_list, text_frame, button_frame, flashcard_queue)
@@ -1145,7 +1146,7 @@ class inboxPage(page):
                 self.rating3_button.config(**button2_off)
                 self.rating4_button.config(**button_on)
 
-        def check_feedback():
+        def check_feedback(flashcard_priority, marking_username, marking_flashcard, flashcard_useranswer, inner_frame, marking_user, mark_button):
             peer_feedback = self.flashcard_feedback.get("1.0", "end-1c")
             if len(peer_feedback) > 500:
                 messagebox.showerror("Invalid Feedback", "Feedback cannot exceed 500 characters in length.")
