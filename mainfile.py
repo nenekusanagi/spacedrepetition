@@ -937,7 +937,6 @@ class collectionPage(page):
                     for widget in button_frame.winfo_children():
                         self.destroy_button(widget)
 
-                    print(flashcard_queue.getQueue())
                     flashcard_counter += 1
                     if flashcard_counter > 10:
                         end_review(review_flashcards_page, peer_review_stack, flashcard_counter, reviewed_list, text_frame, button_frame, flashcard_queue)
