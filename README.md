@@ -1,3 +1,7 @@
+Amy Thompson Computer Science AQA A-Level NEA
+
+Centre Number 12290, Candidate Number 6245
+
 Spaced Repetition Flashcard Software
 
 This software serves as a program for the user to create their own flashcards (question and answer) and decks, and then review them based on a priority (spaced repetition) algorithm.
