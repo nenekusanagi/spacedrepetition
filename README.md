@@ -1,6 +1,6 @@
-Amy Thompson Computer Science AQA A-Level NEA#
+# Amy Thompson Computer Science AQA A-Level NEA
 
-**Centre Number 12290, Candidate Number 6245**
+## Centre Number 12290, Candidate Number 6245
 
 Spaced Repetition Flashcard Software
 
